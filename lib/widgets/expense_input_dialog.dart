@@ -783,10 +783,13 @@ class _ExpenseInputDialogState extends State<ExpenseInputDialog> {
             onPressed: () => Navigator.of(context).pop(false),
             child: const Text('취소'),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('삭제'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('확인'),
           ),
         ],
       ),
@@ -795,7 +798,12 @@ class _ExpenseInputDialogState extends State<ExpenseInputDialog> {
     if (confirmed == true && mounted) {
       final expenseProvider =
           Provider.of<ExpenseProvider>(context, listen: false);
+
+      // Delete the expense
       await expenseProvider.deleteExpense(widget.existingExpense!.id);
+
+      // Force reload to update the calendar
+      await expenseProvider.loadExpenses();
 
       if (mounted) {
         Navigator.of(context).pop();

@@ -83,17 +83,17 @@ class ExportService {
         pageFormat: PdfPageFormat.a4,
         build: (pw.Context context) {
           return [
-            // 제목
+            // 제목 (영문)
             pw.Header(
               level: 0,
               child: pw.Text(
-                'K학원 지출 내역',
+                'K Academy Expense Report',
                 style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold),
               ),
             ),
             pw.SizedBox(height: 20),
 
-            // 요약 정보
+            // 요약 정보 (영문)
             pw.Container(
               padding: const pw.EdgeInsets.all(10),
               decoration: pw.BoxDecoration(
@@ -103,17 +103,17 @@ class ExportService {
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
                   pw.Text(
-                    '생성일: ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now())}',
+                    'Generated: ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now())}',
                   ),
                   pw.SizedBox(height: 5),
-                  pw.Text('총 항목 수: ${expenses.length}개'),
+                  pw.Text('Total Items: ${expenses.length}'),
                   pw.SizedBox(height: 5),
-                  pw.Text('총 금액: ${formatNumber(totalAmount)}원'),
+                  pw.Text('Total Amount: ${formatNumber(totalAmount)} KRW'),
                   pw.SizedBox(height: 5),
-                  pw.Text('총 취소금액: ${formatNumber(totalCancellation)}원'),
+                  pw.Text('Total Cancellation: ${formatNumber(totalCancellation)} KRW'),
                   pw.SizedBox(height: 5),
                   pw.Text(
-                    '순 지출: ${formatNumber(netAmount)}원',
+                    'Net Expense: ${formatNumber(netAmount)} KRW',
                     style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
                   ),
                 ],
@@ -121,7 +121,7 @@ class ExportService {
             ),
             pw.SizedBox(height: 20),
 
-            // 지출 내역 테이블
+            // 지출 내역 테이블 (영문 헤더)
             pw.Table.fromTextArray(
               headerStyle: pw.TextStyle(
                 fontWeight: pw.FontWeight.bold,
@@ -133,17 +133,17 @@ class ExportService {
               ),
               cellAlignment: pw.Alignment.centerLeft,
               headers: [
-                '결제일',
-                '자녀',
-                '상호',
-                '과목',
-                '강사',
-                '세부내역',
-                '수업형태',
-                '결제방법',
-                '금액',
-                '취소금액',
-                '환불',
+                'Date',
+                'Child',
+                'Business',
+                'Subject',
+                'Instructor',
+                'Detail',
+                'Type',
+                'Payment',
+                'Amount',
+                'Cancel',
+                'Refund',
               ],
               data: expenses.map((expense) {
                 return [
@@ -157,7 +157,7 @@ class ExportService {
                   expense.paymentMethod,
                   formatNumber(expense.amount),
                   formatNumber(expense.cancellationAmount),
-                  expense.isRefunded ? '예' : '아니오',
+                  expense.isRefunded ? 'Yes' : 'No',
                 ];
               }).toList(),
             ),
@@ -170,7 +170,7 @@ class ExportService {
     final bytes = await pdf.save();
     downloadFile(
       bytes,
-      'K학원_지출내역_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf',
+      'K_Academy_Expenses_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf',
     );
   }
 

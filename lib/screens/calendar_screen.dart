@@ -132,52 +132,27 @@ class _CalendarScreenState extends State<CalendarScreen> {
               ),
             ],
           ),
-          // Export buttons at bottom left
+          // Export button at bottom left
           Positioned(
             left: 16,
             bottom: 16,
-            child: Row(
-              children: [
-                // Excel button
-                ElevatedButton(
-                  onPressed: () {
-                    final expenses = expenseProvider.getAllExpenses();
-                    ExportService.exportToExcel(expenses);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.lightGreen,
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
-                  ),
-                  child: const Text(
-                    'Excel',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
+            child: ElevatedButton(
+              onPressed: () {
+                final expenses = expenseProvider.getAllExpenses();
+                ExportService.exportToExcel(expenses);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.lightGreen,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
                 ),
-                const SizedBox(width: 12),
-                // PDF button
-                ElevatedButton(
-                  onPressed: () {
-                    final expenses = expenseProvider.getAllExpenses();
-                    ExportService.exportToPdf(expenses);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.red,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
-                  ),
-                  child: const Text(
-                    'PDF',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
+              ),
+              child: const Text(
+                'Excel',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
           ),
         ],
@@ -316,10 +291,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
             onPressed: () => Navigator.of(context).pop(false),
             child: const Text('취소'),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('삭제'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('확인'),
           ),
         ],
       ),
@@ -328,7 +306,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
     if (confirmed == true && context.mounted) {
       final expenseProvider =
           Provider.of<ExpenseProvider>(context, listen: false);
+
+      // Delete the expense
       await expenseProvider.deleteExpense(expense.id);
+
+      // Force reload to update the calendar markers
+      await expenseProvider.loadExpenses();
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
