@@ -30,13 +30,14 @@ class ExpenseAdapter extends TypeAdapter<Expense> {
       amount: fields[10] as int,
       cancellationAmount: fields[11] as int,
       isRefunded: fields[12] as bool,
+      memo: fields[13] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Expense obj) {
     writer
-      ..writeByte(13)
+      ..writeByte(14)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -62,7 +63,9 @@ class ExpenseAdapter extends TypeAdapter<Expense> {
       ..writeByte(11)
       ..write(obj.cancellationAmount)
       ..writeByte(12)
-      ..write(obj.isRefunded);
+      ..write(obj.isRefunded)
+      ..writeByte(13)
+      ..write(obj.memo);
   }
 
   @override

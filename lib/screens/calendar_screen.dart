@@ -4,6 +4,7 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:k_academy__app/models/expense.dart';
 import 'package:k_academy__app/providers/expense_provider.dart';
 import 'package:k_academy__app/widgets/expense_input_dialog.dart';
+import 'package:k_academy__app/services/export_service.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -32,9 +33,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
       ),
       body: Consumer<ExpenseProvider>(
         builder: (context, expenseProvider, child) {
-          return Column(
+          return Stack(
             children: [
-              TableCalendar(
+              Column(
+                children: [
+                  TableCalendar(
                 firstDay: DateTime(2000),
                 lastDay: DateTime(2100),
                 focusedDay: _focusedDay,
@@ -108,7 +111,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   },
                 ),
                 headerStyle: const HeaderStyle(
-                  formatButtonVisible: true,
+                  formatButtonVisible: false,
                   titleCentered: true,
                 ),
                 calendarStyle: CalendarStyle(
@@ -128,6 +131,56 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 child: _buildExpenseList(expenseProvider),
               ),
             ],
+          ),
+          // Export buttons at bottom left
+          Positioned(
+            left: 16,
+            bottom: 16,
+            child: Row(
+              children: [
+                // Excel button
+                ElevatedButton(
+                  onPressed: () {
+                    final expenses = expenseProvider.getAllExpenses();
+                    ExportService.exportToExcel(expenses);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.lightGreen,
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
+                  ),
+                  child: const Text(
+                    'Excel',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // PDF button
+                ElevatedButton(
+                  onPressed: () {
+                    final expenses = expenseProvider.getAllExpenses();
+                    ExportService.exportToPdf(expenses);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.red,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
+                  ),
+                  child: const Text(
+                    'PDF',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
           );
         },
       ),
@@ -162,6 +215,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         return Card(
           margin: const EdgeInsets.only(bottom: 8),
           child: ListTile(
+            onTap: () => _showExpenseOptionsDialog(context, expense),
             title: Text(
               '${expense.childName} - ${expense.subject}',
               style: const TextStyle(fontWeight: FontWeight.bold),
@@ -212,6 +266,76 @@ class _CalendarScreenState extends State<CalendarScreen> {
           RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
           (Match m) => '${m[1]},',
         );
+  }
+
+  void _showExpenseOptionsDialog(BuildContext context, Expense expense) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('지출 내역 관리'),
+        content: const Text('작업을 선택하세요'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _showEditExpenseDialog(context, expense);
+            },
+            child: const Text('수정'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              await _deleteExpense(context, expense);
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditExpenseDialog(BuildContext context, Expense expense) {
+    showDialog(
+      context: context,
+      builder: (context) => ExpenseInputDialog(
+        selectedDate: expense.paymentDate,
+        existingExpense: expense,
+      ),
+    );
+  }
+
+  Future<void> _deleteExpense(BuildContext context, Expense expense) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('삭제 확인'),
+        content: const Text('이 지출 내역을 삭제하시겠습니까?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      final expenseProvider =
+          Provider.of<ExpenseProvider>(context, listen: false);
+      await expenseProvider.deleteExpense(expense.id);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('지출 내역이 삭제되었습니다')),
+        );
+      }
+    }
   }
 
   void _showExpenseInputDialog(BuildContext context) {

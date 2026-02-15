@@ -70,4 +70,32 @@ class DropdownHistoryService {
       await box.add(detail);
     }
   }
+
+  // Card names
+  List<String> getCardNames() {
+    final box = StorageService.cardNamesBox;
+    return box.values.toList();
+  }
+
+  Future<void> addCardName(String name) async {
+    if (name.trim().isEmpty) return;
+    final box = StorageService.cardNamesBox;
+    if (!box.values.contains(name)) {
+      await box.add(name);
+    }
+  }
+
+  // Custom payment methods
+  List<String> getCustomPaymentMethods() {
+    final box = StorageService.customPaymentMethodsBox;
+    return box.values.toList();
+  }
+
+  Future<void> addCustomPaymentMethod(String method) async {
+    if (method.trim().isEmpty) return;
+    final box = StorageService.customPaymentMethodsBox;
+    if (!box.values.contains(method)) {
+      await box.add(method);
+    }
+  }
 }

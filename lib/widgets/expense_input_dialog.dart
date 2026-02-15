@@ -12,10 +12,12 @@ import 'package:k_academy__app/utils/date_utils.dart' as app_date_utils;
 
 class ExpenseInputDialog extends StatefulWidget {
   final DateTime selectedDate;
+  final Expense? existingExpense;
 
   const ExpenseInputDialog({
     super.key,
     required this.selectedDate,
+    this.existingExpense,
   });
 
   @override
@@ -27,9 +29,9 @@ class _ExpenseInputDialogState extends State<ExpenseInputDialog> {
   final _uuid = const Uuid();
 
   // Controllers
-  final _cardNameController = TextEditingController();
   final _amountController = TextEditingController();
   final _cancellationAmountController = TextEditingController();
+  final _memoController = TextEditingController();
 
   // Form values
   String? _childName;
@@ -40,19 +42,48 @@ class _ExpenseInputDialogState extends State<ExpenseInputDialog> {
   String? _detail;
   String _classType = classTypes[0]; // Default: 현강
   String _paymentMethod = paymentMethods[0]; // Default: 카드
+  String? _cardName;
   bool _isRefunded = false;
 
   @override
   void initState() {
     super.initState();
-    _paymentDate = widget.selectedDate;
+
+    if (widget.existingExpense != null) {
+      // Edit mode: pre-fill with existing data
+      final expense = widget.existingExpense!;
+      _childName = expense.childName;
+      _paymentDate = expense.paymentDate;
+      _businessName = expense.businessName;
+      _subject = expense.subject;
+      _instructor = expense.instructor;
+      _detail = expense.detail;
+      _classType = expense.classType;
+      _paymentMethod = expense.paymentMethod;
+      _cardName = expense.cardName;
+      _amountController.text = _formatNumber(expense.amount);
+      _cancellationAmountController.text = _formatNumber(expense.cancellationAmount);
+      _isRefunded = expense.isRefunded;
+      _memoController.text = expense.memo ?? '';
+    } else {
+      // Add mode: use selected date
+      _paymentDate = widget.selectedDate;
+    }
+  }
+
+  String _formatNumber(int number) {
+    if (number == 0) return '';
+    return number.toString().replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]},',
+        );
   }
 
   @override
   void dispose() {
-    _cardNameController.dispose();
     _amountController.dispose();
     _cancellationAmountController.dispose();
+    _memoController.dispose();
     super.dispose();
   }
 
@@ -65,7 +96,7 @@ class _ExpenseInputDialogState extends State<ExpenseInputDialog> {
         constraints: const BoxConstraints(maxWidth: 600, maxHeight: 700),
         child: Scaffold(
           appBar: AppBar(
-            title: const Text('지출 입력'),
+            title: Text(widget.existingExpense != null ? '지출 수정' : '지출 입력'),
             automaticallyImplyLeading: false,
             actions: [
               IconButton(
@@ -289,31 +320,74 @@ class _ExpenseInputDialogState extends State<ExpenseInputDialog> {
                     labelText: '결제방법 *',
                     border: OutlineInputBorder(),
                   ),
-                  items: paymentMethods.map((method) {
-                    return DropdownMenuItem<String>(
-                      value: method,
-                      child: Text(method),
-                    );
-                  }).toList(),
+                  items: [
+                    ...dropdownProvider.allPaymentMethods.map((method) {
+                      return DropdownMenuItem<String>(
+                        value: method,
+                        child: Text(method),
+                      );
+                    }),
+                    const DropdownMenuItem<String>(
+                      value: addNewOption,
+                      child: Text(
+                        addNewOption,
+                        style: TextStyle(
+                          color: Colors.blue,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                   onChanged: (value) {
-                    setState(() {
-                      _paymentMethod = value!;
-                      if (_paymentMethod != '카드') {
-                        _cardNameController.clear();
-                      }
-                    });
+                    if (value == addNewOption) {
+                      _showAddCustomPaymentMethodDialog(context, dropdownProvider);
+                    } else {
+                      setState(() {
+                        _paymentMethod = value!;
+                        if (_paymentMethod != '카드') {
+                          _cardName = null;
+                        }
+                      });
+                    }
                   },
                 ),
                 const SizedBox(height: 16),
 
                 // 8-1. 카드명 (조건부)
                 if (_paymentMethod == '카드') ...[
-                  TextFormField(
-                    controller: _cardNameController,
+                  DropdownButtonFormField<String>(
+                    value: _cardName,
                     decoration: const InputDecoration(
                       labelText: '카드명',
                       border: OutlineInputBorder(),
                     ),
+                    items: [
+                      ...dropdownProvider.cardNames.map((name) {
+                        return DropdownMenuItem<String>(
+                          value: name,
+                          child: Text(name),
+                        );
+                      }),
+                      const DropdownMenuItem<String>(
+                        value: addNewOption,
+                        child: Text(
+                          addNewOption,
+                          style: TextStyle(
+                            color: Colors.blue,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      if (value == addNewOption) {
+                        _showAddCardNameDialog(context, dropdownProvider);
+                      } else {
+                        setState(() {
+                          _cardName = value;
+                        });
+                      }
+                    },
                   ),
                   const SizedBox(height: 16),
                 ],
@@ -334,31 +408,75 @@ class _ExpenseInputDialogState extends State<ExpenseInputDialog> {
                 ),
                 const SizedBox(height: 16),
 
-                // 11. 환불여부
-                CheckboxListTile(
-                  title: const Text('환불여부'),
-                  value: _isRefunded,
-                  onChanged: (value) {
+                // 11. 환불 여부
+                InkWell(
+                  onTap: () {
                     setState(() {
-                      _isRefunded = value ?? false;
+                      _isRefunded = !_isRefunded;
                     });
                   },
-                  controlAffinity: ListTileControlAffinity.leading,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Row(
+                      children: [
+                        Checkbox(
+                          value: _isRefunded,
+                          onChanged: (value) {
+                            setState(() {
+                              _isRefunded = value ?? false;
+                            });
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        const Text('환불 여부 확인 완료'),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // 12. 메모
+                TextFormField(
+                  controller: _memoController,
+                  decoration: const InputDecoration(
+                    labelText: '메모',
+                    border: OutlineInputBorder(),
+                    hintText: '자유롭게 메모를 작성하세요',
+                  ),
+                  maxLines: 3,
                 ),
                 const SizedBox(height: 24),
 
                 // Buttons
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('취소'),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: _saveExpense,
-                      child: const Text('확인'),
+                    // Delete button (only in edit mode)
+                    if (widget.existingExpense != null)
+                      TextButton(
+                        onPressed: _deleteExpense,
+                        style: TextButton.styleFrom(foregroundColor: Colors.red),
+                        child: const Text('삭제'),
+                      )
+                    else
+                      const SizedBox.shrink(),
+                    // Right side buttons
+                    Row(
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('취소'),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          onPressed: _saveExpense,
+                          child: const Text('저장'),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -485,6 +603,106 @@ class _ExpenseInputDialogState extends State<ExpenseInputDialog> {
     );
   }
 
+  void _showAddCustomPaymentMethodDialog(
+    BuildContext context,
+    DropdownProvider provider,
+  ) {
+    final controller = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('새 결제방법 추가'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: '결제방법',
+            border: OutlineInputBorder(),
+          ),
+          autofocus: true,
+          onSubmitted: (value) {
+            if (value.trim().isNotEmpty) {
+              provider.addCustomPaymentMethod(value.trim());
+              setState(() {
+                _paymentMethod = value.trim();
+              });
+              Navigator.of(context).pop();
+            }
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('취소'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final newValue = controller.text.trim();
+              if (newValue.isNotEmpty) {
+                provider.addCustomPaymentMethod(newValue);
+                setState(() {
+                  _paymentMethod = newValue;
+                });
+                Navigator.of(context).pop();
+              }
+            },
+            child: const Text('추가'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddCardNameDialog(
+    BuildContext context,
+    DropdownProvider provider,
+  ) {
+    final controller = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('새 카드명 추가'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: '카드명',
+            border: OutlineInputBorder(),
+          ),
+          autofocus: true,
+          onSubmitted: (value) {
+            if (value.trim().isNotEmpty) {
+              provider.addCardName(value.trim());
+              setState(() {
+                _cardName = value.trim();
+              });
+              Navigator.of(context).pop();
+            }
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('취소'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final newValue = controller.text.trim();
+              if (newValue.isNotEmpty) {
+                provider.addCardName(newValue);
+                setState(() {
+                  _cardName = newValue;
+                });
+                Navigator.of(context).pop();
+              }
+            },
+            child: const Text('추가'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _saveExpense() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -512,10 +730,13 @@ class _ExpenseInputDialogState extends State<ExpenseInputDialog> {
     if (_instructor != null) {
       await dropdownProvider.addInstructorName(_instructor!);
     }
+    if (_cardName != null && _cardName!.isNotEmpty) {
+      await dropdownProvider.addCardName(_cardName!);
+    }
 
-    // Create expense
+    // Create or update expense
     final expense = Expense(
-      id: _uuid.v4(),
+      id: widget.existingExpense?.id ?? _uuid.v4(),
       childName: _childName!,
       paymentDate: _paymentDate!,
       businessName: _businessName!,
@@ -524,20 +745,64 @@ class _ExpenseInputDialogState extends State<ExpenseInputDialog> {
       detail: _detail!,
       classType: _classType,
       paymentMethod: _paymentMethod,
-      cardName:
-          _paymentMethod == '카드' ? _cardNameController.text.trim() : null,
+      cardName: _paymentMethod == '카드' ? _cardName : null,
       amount: parseFormattedNumber(_amountController.text),
       cancellationAmount: parseFormattedNumber(_cancellationAmountController.text),
       isRefunded: _isRefunded,
+      memo: _memoController.text.trim().isEmpty ? null : _memoController.text.trim(),
     );
 
-    await expenseProvider.addExpense(expense);
+    if (widget.existingExpense != null) {
+      // Update existing expense
+      await expenseProvider.updateExpense(expense);
+    } else {
+      // Add new expense
+      await expenseProvider.addExpense(expense);
+    }
 
     if (mounted) {
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('지출이 저장되었습니다')),
+        SnackBar(
+          content: Text(widget.existingExpense != null ? '지출이 수정되었습니다' : '지출이 저장되었습니다'),
+        ),
       );
+    }
+  }
+
+  Future<void> _deleteExpense() async {
+    if (widget.existingExpense == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('삭제 확인'),
+        content: const Text('이 지출 내역을 삭제하시겠습니까?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      final expenseProvider =
+          Provider.of<ExpenseProvider>(context, listen: false);
+      await expenseProvider.deleteExpense(widget.existingExpense!.id);
+
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('지출이 삭제되었습니다')),
+        );
+      }
     }
   }
 }

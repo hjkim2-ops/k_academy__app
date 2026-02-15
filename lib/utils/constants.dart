@@ -42,6 +42,8 @@ const String businessNamesBoxName = 'businessNames';
 const String instructorsBoxName = 'instructors';
 const String customSubjectsBoxName = 'customSubjects';
 const String customDetailsBoxName = 'customDetails';
+const String cardNamesBoxName = 'cardNames';
+const String customPaymentMethodsBoxName = 'customPaymentMethods';
 
 // "새로 추가" 상수
 const String addNewOption = '+ 새로 추가';

@@ -21,8 +21,11 @@ class CustomDropdownField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Remove duplicates from options list
+    final uniqueOptions = options.toSet().toList();
+
     // Add "새로 추가" option to the list
-    final allOptions = [...options, addNewOption];
+    final allOptions = [...uniqueOptions, addNewOption];
 
     return DropdownButtonFormField<String>(
       initialValue: value,

@@ -10,16 +10,22 @@ class DropdownProvider with ChangeNotifier {
   List<String> _instructorNames = [];
   List<String> _customSubjects = [];
   List<String> _customDetails = [];
+  List<String> _cardNames = [];
+  List<String> _customPaymentMethods = [];
 
-  List<String> get childNames => _childNames;
-  List<String> get businessNames => _businessNames;
-  List<String> get instructorNames => _instructorNames;
+  List<String> get childNames => _childNames.toSet().toList();
+  List<String> get businessNames => _businessNames.toSet().toList();
+  List<String> get instructorNames => _instructorNames.toSet().toList();
+  List<String> get cardNames => _cardNames.toSet().toList();
 
   // Get all subjects (default + custom)
-  List<String> get allSubjects => [...defaultSubjects, ..._customSubjects];
+  List<String> get allSubjects => [...defaultSubjects, ..._customSubjects].toSet().toList();
 
   // Get all details (default + custom)
-  List<String> get allDetails => [...defaultDetails, ..._customDetails];
+  List<String> get allDetails => [...defaultDetails, ..._customDetails].toSet().toList();
+
+  // Get all payment methods (default + custom)
+  List<String> get allPaymentMethods => [...paymentMethods, ..._customPaymentMethods].toSet().toList();
 
   // Load all dropdown data from storage
   Future<void> loadAllDropdownData() async {
@@ -28,6 +34,8 @@ class DropdownProvider with ChangeNotifier {
     _instructorNames = _historyService.getInstructorNames();
     _customSubjects = _historyService.getCustomSubjects();
     _customDetails = _historyService.getCustomDetails();
+    _cardNames = _historyService.getCardNames();
+    _customPaymentMethods = _historyService.getCustomPaymentMethods();
     notifyListeners();
   }
 
@@ -76,6 +84,26 @@ class DropdownProvider with ChangeNotifier {
     }
     await _historyService.addCustomDetail(detail);
     _customDetails = _historyService.getCustomDetails();
+    notifyListeners();
+  }
+
+  // Add card name
+  Future<void> addCardName(String name) async {
+    if (name.trim().isEmpty || _cardNames.contains(name)) return;
+    await _historyService.addCardName(name);
+    _cardNames = _historyService.getCardNames();
+    notifyListeners();
+  }
+
+  // Add custom payment method
+  Future<void> addCustomPaymentMethod(String method) async {
+    if (method.trim().isEmpty ||
+        paymentMethods.contains(method) ||
+        _customPaymentMethods.contains(method)) {
+      return;
+    }
+    await _historyService.addCustomPaymentMethod(method);
+    _customPaymentMethods = _historyService.getCustomPaymentMethods();
     notifyListeners();
   }
 }

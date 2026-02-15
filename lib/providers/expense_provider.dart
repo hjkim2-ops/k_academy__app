@@ -33,6 +33,11 @@ class ExpenseProvider with ChangeNotifier {
     return _expensesByDate[normalizedDate] ?? [];
   }
 
+  // Get all expenses
+  List<Expense> getAllExpenses() {
+    return _expenseService.getAllExpenses();
+  }
+
   // Add a new expense
   Future<void> addExpense(Expense expense) async {
     await _expenseService.addExpense(expense);

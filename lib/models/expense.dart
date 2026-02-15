@@ -43,6 +43,9 @@ class Expense extends HiveObject {
   @HiveField(12)
   final bool isRefunded;
 
+  @HiveField(13)
+  final String? memo;
+
   Expense({
     required this.id,
     required this.childName,
@@ -57,6 +60,7 @@ class Expense extends HiveObject {
     required this.amount,
     required this.cancellationAmount,
     required this.isRefunded,
+    this.memo,
   });
 
   // dateKey getter for calendar grouping (normalized to midnight)
@@ -81,6 +85,7 @@ class Expense extends HiveObject {
     int? amount,
     int? cancellationAmount,
     bool? isRefunded,
+    String? memo,
   }) {
     return Expense(
       id: id ?? this.id,
@@ -96,6 +101,7 @@ class Expense extends HiveObject {
       amount: amount ?? this.amount,
       cancellationAmount: cancellationAmount ?? this.cancellationAmount,
       isRefunded: isRefunded ?? this.isRefunded,
+      memo: memo ?? this.memo,
     );
   }
 }
