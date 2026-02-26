@@ -6,6 +6,7 @@ import 'package:k_academy__app/providers/auth_provider.dart';
 import 'package:k_academy__app/providers/child_filter_provider.dart';
 import 'package:k_academy__app/providers/expense_provider.dart';
 import 'package:k_academy__app/widgets/child_filter_dropdown.dart';
+import 'package:k_academy__app/screens/home_screen.dart';
 import 'package:k_academy__app/widgets/expense_input_dialog.dart';
 import 'package:k_academy__app/services/export_service.dart';
 
@@ -69,22 +70,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   ),
                 );
               },
-            )
-          // 로그인 모드: 사용자 이메일 + 클라우드 아이콘
-          else if (auth.user != null)
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.cloud_done, color: Colors.green, size: 18),
-                  const SizedBox(width: 4),
-                  Text(
-                    auth.user!.email?.split('@').first ?? '',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ],
-              ),
+            ),
+          // 로그인 모드: 점 세개 메뉴
+          if (!auth.isTrialMode)
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              onSelected: (v) {
+                if (v == 'logout') signOutAndRestart(context);
+              },
+              itemBuilder: (_) => [
+                const PopupMenuItem(value: 'logout', child: Text('로그아웃')),
+              ],
             ),
         ],
       ),
