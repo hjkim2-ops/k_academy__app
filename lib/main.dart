@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:k_academy__app/firebase_options.dart';
 import 'package:k_academy__app/services/storage_service.dart';
 import 'package:k_academy__app/providers/auth_provider.dart';
+import 'package:k_academy__app/providers/child_filter_provider.dart';
 import 'package:k_academy__app/providers/expense_provider.dart';
 import 'package:k_academy__app/providers/schedule_provider.dart';
 import 'package:k_academy__app/providers/dropdown_provider.dart';
@@ -52,6 +53,8 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) => DropdownProvider()..loadAllDropdownData(),
         ),
+
+        ChangeNotifierProvider(create: (_) => ChildFilterProvider()),
       ],
       child: MaterialApp(
         title: 'K-학원',

@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:k_academy__app/models/expense.dart';
 import 'package:k_academy__app/providers/auth_provider.dart';
+import 'package:k_academy__app/providers/child_filter_provider.dart';
 import 'package:k_academy__app/providers/expense_provider.dart';
 import 'package:k_academy__app/screens/home_screen.dart';
+import 'package:k_academy__app/widgets/child_filter_dropdown.dart';
 
 class ExpenseStatsScreen extends StatefulWidget {
   const ExpenseStatsScreen({super.key});
@@ -19,7 +21,13 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
 
   static const _periods = ['이번달', '지난달', '3개월', '올해'];
 
-  List<Expense> _filtered(List<Expense> all) {
+  List<Expense> _filtered(List<Expense> all, String? selectedChild) {
+    // Apply child filter first
+    final byChild = selectedChild == null
+        ? all
+        : all.where((e) => e.childName == selectedChild).toList();
+
+    // Then apply period filter
     final now = DateTime.now();
     DateTime from;
     switch (_period) {
@@ -27,7 +35,7 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
         final last = DateTime(now.year, now.month - 1);
         from = DateTime(last.year, last.month);
         final to = DateTime(last.year, last.month + 1);
-        return all
+        return byChild
             .where((e) =>
                 !e.paymentDate.isBefore(from) && e.paymentDate.isBefore(to))
             .toList();
@@ -40,7 +48,7 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
       default: // 이번달
         from = DateTime(now.year, now.month);
     }
-    return all
+    return byChild
         .where((e) => !e.paymentDate.isBefore(from))
         .toList();
   }
@@ -56,10 +64,19 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+    final selectedChild = context.watch<ChildFilterProvider>().selectedChild;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('지출통계'),
+        centerTitle: false,
+        flexibleSpace: const Align(
+          alignment: Alignment.topCenter,
+          child: SizedBox(
+            height: kToolbarHeight,
+            child: Center(child: ChildFilterDropdown()),
+          ),
+        ),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           if (!auth.isTrialMode)
@@ -77,7 +94,7 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
       body: Consumer<ExpenseProvider>(
         builder: (context, provider, _) {
           final all = provider.getAllExpenses();
-          final filtered = _filtered(all);
+          final filtered = _filtered(all, selectedChild);
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -177,7 +194,9 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
 
     return _ChartCard(
       title: '자녀별 지출',
-      child: BarChart(
+      child: SizedBox(
+        height: 200,
+        child: BarChart(
         BarChartData(
           maxY: (maxVal / 10000).ceilToDouble() * 1.2,
           barTouchData: BarTouchData(
@@ -235,6 +254,7 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
             );
           }).toList(),
         ),
+      ),
       ),
     );
   }

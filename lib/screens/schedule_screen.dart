@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:k_academy__app/models/schedule.dart';
 import 'package:k_academy__app/providers/auth_provider.dart';
+import 'package:k_academy__app/providers/child_filter_provider.dart';
 import 'package:k_academy__app/providers/schedule_provider.dart';
 import 'package:k_academy__app/screens/home_screen.dart';
+import 'package:k_academy__app/widgets/child_filter_dropdown.dart';
 import 'package:k_academy__app/widgets/schedule_input_dialog.dart';
 
 class ScheduleScreen extends StatefulWidget {
@@ -17,7 +19,6 @@ class ScheduleScreen extends StatefulWidget {
 class _ScheduleScreenState extends State<ScheduleScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  String? _selectedChild; // null = 전체
 
   static const double _pixelsPerHour = 60.0;
   static const int _startHour = 7;
@@ -45,6 +46,14 @@ class _ScheduleScreenState extends State<ScheduleScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('시간표 관리'),
+        centerTitle: false,
+        flexibleSpace: const Align(
+          alignment: Alignment.topCenter,
+          child: SizedBox(
+            height: kToolbarHeight,
+            child: Center(child: ChildFilterDropdown()),
+          ),
+        ),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           if (!auth.isTrialMode)
@@ -68,17 +77,14 @@ class _ScheduleScreenState extends State<ScheduleScreen>
       ),
       body: Consumer<ScheduleProvider>(
         builder: (context, provider, _) {
-          final children = provider.childNames;
-          final schedules = _selectedChild == null
+          final selectedChild =
+              context.watch<ChildFilterProvider>().selectedChild;
+          final schedules = selectedChild == null
               ? provider.activeSchedules
-              : provider.schedulesForChild(_selectedChild!);
+              : provider.schedulesForChild(selectedChild);
 
           return Column(
             children: [
-              // 자녀 필터
-              if (children.isNotEmpty)
-                _buildChildFilter(children),
-
               Expanded(
                 child: TabBarView(
                   controller: _tabController,
@@ -93,32 +99,10 @@ class _ScheduleScreenState extends State<ScheduleScreen>
         },
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'schedule_fab',
         onPressed: () => _showAddDialog(context),
         tooltip: '시간표 추가',
         child: const Icon(Icons.add),
-      ),
-    );
-  }
-
-  Widget _buildChildFilter(List<String> children) {
-    return Container(
-      height: 44,
-      color: Colors.grey[100],
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        children: [
-          _FilterChip(
-            label: '전체',
-            selected: _selectedChild == null,
-            onTap: () => setState(() => _selectedChild = null),
-          ),
-          ...children.map((c) => _FilterChip(
-                label: c,
-                selected: _selectedChild == c,
-                onTap: () => setState(() => _selectedChild = c),
-              )),
-        ],
       ),
     );
   }
@@ -416,41 +400,3 @@ class _ScheduleBlock extends StatelessWidget {
   }
 }
 
-class _FilterChip extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _FilterChip(
-      {required this.label, required this.selected, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(right: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        decoration: BoxDecoration(
-          color: selected
-              ? Theme.of(context).primaryColor
-              : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: selected
-                ? Theme.of(context).primaryColor
-                : Colors.grey[300]!,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-              fontSize: 12,
-              color: selected ? Colors.white : Colors.black87,
-              fontWeight:
-                  selected ? FontWeight.bold : FontWeight.normal),
-        ),
-      ),
-    );
-  }
-}

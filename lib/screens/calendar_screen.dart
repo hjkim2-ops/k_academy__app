@@ -3,7 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:k_academy__app/models/expense.dart';
 import 'package:k_academy__app/providers/auth_provider.dart';
+import 'package:k_academy__app/providers/child_filter_provider.dart';
 import 'package:k_academy__app/providers/expense_provider.dart';
+import 'package:k_academy__app/widgets/child_filter_dropdown.dart';
 import 'package:k_academy__app/widgets/expense_input_dialog.dart';
 import 'package:k_academy__app/services/export_service.dart';
 
@@ -28,10 +30,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+    final selectedChild = context.watch<ChildFilterProvider>().selectedChild;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('지출 관리'),
+        centerTitle: false,
+        flexibleSpace: const Align(
+          alignment: Alignment.topCenter,
+          child: SizedBox(
+            height: kToolbarHeight,
+            child: Center(child: ChildFilterDropdown()),
+          ),
+        ),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           // 맛보기 모드: 체험 카운트 배지
@@ -102,8 +113,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     onPageChanged: (focusedDay) {
                       _focusedDay = focusedDay;
                     },
-                    eventLoader: (day) =>
-                        expenseProvider.getExpensesForDate(day),
+                    eventLoader: (day) {
+                      final all = expenseProvider.getExpensesForDate(day);
+                      if (selectedChild == null) return all;
+                      return all
+                          .where((e) => e.childName == selectedChild)
+                          .toList();
+                    },
                     calendarBuilders: CalendarBuilders(
                       markerBuilder: (context, date, events) {
                         if (events.isEmpty) return null;
@@ -160,7 +176,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  Expanded(child: _buildExpenseList(expenseProvider)),
+                  Expanded(child: _buildExpenseList(expenseProvider, selectedChild)),
                 ],
               ),
               // Excel 내보내기 버튼
@@ -187,6 +203,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         },
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'calendar_fab',
         onPressed: () => _onAddPressed(context),
         tooltip: '지출 추가',
         child: const Icon(Icons.add),
@@ -262,12 +279,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildExpenseList(ExpenseProvider expenseProvider) {
+  Widget _buildExpenseList(ExpenseProvider expenseProvider, String? selectedChild) {
     if (_selectedDay == null) {
       return const Center(child: Text('날짜를 선택해주세요'));
     }
 
-    final expenses = expenseProvider.getExpensesForDate(_selectedDay!);
+    final all = expenseProvider.getExpensesForDate(_selectedDay!);
+    final expenses = selectedChild == null
+        ? all
+        : all.where((e) => e.childName == selectedChild).toList();
 
     if (expenses.isEmpty) {
       return const Center(child: Text('이 날짜에 지출 내역이 없습니다'));
