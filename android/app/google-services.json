@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "582952052910",
+    "project_id": "k-academy-app-data",
+    "storage_bucket": "k-academy-app-data.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:582952052910:android:3c073a6d49ef569681e53f",
+        "android_client_info": {
+          "package_name": "com.example.k_academy__app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCgbyjo1c_XemQnuTjV1-2eOdMGWVGh4nA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

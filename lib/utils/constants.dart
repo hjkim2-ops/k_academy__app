@@ -45,5 +45,22 @@ const String customDetailsBoxName = 'customDetails';
 const String cardNamesBoxName = 'cardNames';
 const String customPaymentMethodsBoxName = 'customPaymentMethods';
 
+// Schedule box name
+const String scheduleBoxName = 'schedules';
+
+// 시간표 색상 팔레트
+const List<int> scheduleColorValues = [
+  0xFF2196F3, // Blue
+  0xFF4CAF50, // Green
+  0xFFFF9800, // Orange
+  0xFF9C27B0, // Purple
+  0xFFE91E63, // Pink
+  0xFF009688, // Teal
+  0xFFFF5722, // Deep Orange
+  0xFF607D8B, // Blue Grey
+  0xFF795548, // Brown
+  0xFF00BCD4, // Cyan
+];
+
 // "새로 추가" 상수
 const String addNewOption = '+ 새로 추가';

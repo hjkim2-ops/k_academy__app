@@ -63,6 +63,44 @@ class Expense extends HiveObject {
     this.memo,
   });
 
+  // Firestore 직렬화
+  Map<String, dynamic> toMap() {
+    return {
+      'childName': childName,
+      'paymentDate': paymentDate.toIso8601String(),
+      'businessName': businessName,
+      'subject': subject,
+      'instructor': instructor,
+      'detail': detail,
+      'classType': classType,
+      'paymentMethod': paymentMethod,
+      'cardName': cardName,
+      'amount': amount,
+      'cancellationAmount': cancellationAmount,
+      'isRefunded': isRefunded,
+      'memo': memo,
+    };
+  }
+
+  factory Expense.fromMap(String id, Map<String, dynamic> map) {
+    return Expense(
+      id: id,
+      childName: map['childName'] ?? '',
+      paymentDate: DateTime.parse(map['paymentDate']),
+      businessName: map['businessName'] ?? '',
+      subject: map['subject'] ?? '',
+      instructor: map['instructor'] ?? '',
+      detail: map['detail'] ?? '',
+      classType: map['classType'] ?? '현강',
+      paymentMethod: map['paymentMethod'] ?? '',
+      cardName: map['cardName'],
+      amount: map['amount'] ?? 0,
+      cancellationAmount: map['cancellationAmount'] ?? 0,
+      isRefunded: map['isRefunded'] ?? false,
+      memo: map['memo'],
+    );
+  }
+
   // dateKey getter for calendar grouping (normalized to midnight)
   DateTime get dateKey => DateTime(
         paymentDate.year,
