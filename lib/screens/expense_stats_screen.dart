@@ -18,6 +18,7 @@ class ExpenseStatsScreen extends StatefulWidget {
 
 class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
   String _period = '이번달';
+  DateTimeRange? _customRange;
 
   static const _periods = ['이번달', '지난달', '3개월', '올해'];
 
@@ -45,12 +46,58 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
       case '올해':
         from = DateTime(now.year, 1);
         break;
+      case '기간 설정':
+        if (_customRange == null) return byChild;
+        final to = _customRange!.end.add(const Duration(days: 1));
+        return byChild
+            .where((e) =>
+                !e.paymentDate.isBefore(_customRange!.start) &&
+                e.paymentDate.isBefore(to))
+            .toList();
       default: // 이번달
         from = DateTime(now.year, now.month);
     }
     return byChild
         .where((e) => !e.paymentDate.isBefore(from))
         .toList();
+  }
+
+  Future<void> _pickCustomRange() async {
+    final now = DateTime.now();
+    final initial = _customRange ??
+        DateTimeRange(
+          start: DateTime(now.year, now.month, 1),
+          end: now,
+        );
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      initialDateRange: initial,
+      locale: const Locale('ko'),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+          datePickerTheme: const DatePickerThemeData(
+            headerHeadlineStyle: TextStyle(fontSize: 16),
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null) {
+      setState(() {
+        _customRange = picked;
+        _period = '기간 설정';
+      });
+    }
+  }
+
+  String _customRangeLabel() {
+    if (_customRange == null) return '기간 설정';
+    final s = _customRange!.start;
+    final e = _customRange!.end;
+    return '${s.month}/${s.day}~${e.month}/${e.day}';
   }
 
   Map<String, int> _groupBy(List<Expense> list, String Function(Expense) key) {
@@ -121,26 +168,58 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
   }
 
   Widget _buildPeriodSelector() {
+    final isCustom = _period == '기간 설정';
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
-        children: _periods.map((p) {
-          final selected = p == _period;
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ChoiceChip(
-              label: Text(p),
-              selected: selected,
-              onSelected: (_) => setState(() => _period = p),
-              selectedColor: Theme.of(context).primaryColor,
-              labelStyle: TextStyle(
-                color: selected ? Colors.white : null,
-                fontWeight:
-                    selected ? FontWeight.bold : FontWeight.normal,
+        children: [
+          ..._periods.map((p) {
+            final selected = p == _period;
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ChoiceChip(
+                label: Text(p),
+                selected: selected,
+                onSelected: (_) => setState(() => _period = p),
+                selectedColor: Theme.of(context).primaryColor,
+                labelStyle: TextStyle(
+                  color: selected ? Colors.white : null,
+                  fontWeight:
+                      selected ? FontWeight.bold : FontWeight.normal,
+                ),
               ),
+            );
+          }),
+          // 기간 설정 버튼
+          GestureDetector(
+            onTap: _pickCustomRange,
+            child: Chip(
+              label: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _customRangeLabel(),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: isCustom ? Colors.white : null,
+                      fontWeight:
+                          isCustom ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.calendar_month_outlined,
+                    size: 14,
+                    color: isCustom ? Colors.white : Colors.grey[600],
+                  ),
+                ],
+              ),
+              backgroundColor: isCustom
+                  ? Theme.of(context).primaryColor
+                  : null,
             ),
-          );
-        }).toList(),
+          ),
+        ],
       ),
     );
   }

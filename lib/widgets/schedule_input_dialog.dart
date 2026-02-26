@@ -68,7 +68,7 @@ class _ScheduleInputDialogState extends State<ScheduleInputDialog> {
     }
   }
 
-  void _save() {
+  Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedDays.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -84,6 +84,17 @@ class _ScheduleInputDialogState extends State<ScheduleInputDialog> {
       );
       return;
     }
+
+    // 드롭다운 항목 저장
+    final dropdownProvider = context.read<DropdownProvider>();
+    if (_childName != null) await dropdownProvider.addChildName(_childName!);
+    if (_instructor != null && _instructor!.isNotEmpty) {
+      await dropdownProvider.addInstructorName(_instructor!);
+    }
+    if (_academyName != null && _academyName!.isNotEmpty) {
+      await dropdownProvider.addBusinessName(_academyName!);
+    }
+    if (_subject != null) await dropdownProvider.addCustomSubject(_subject!);
 
     final provider = context.read<ScheduleProvider>();
 
@@ -121,7 +132,50 @@ class _ScheduleInputDialogState extends State<ScheduleInputDialog> {
         ));
       }
     }
-    Navigator.of(context).pop();
+    if (mounted) Navigator.of(context).pop();
+  }
+
+  void _showAddNewDialog({
+    required String label,
+    required ValueChanged<String> onAdded,
+  }) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('새 $label 추가'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: InputDecoration(
+            labelText: label,
+            border: const OutlineInputBorder(),
+          ),
+          onSubmitted: (v) {
+            if (v.trim().isNotEmpty) {
+              onAdded(v.trim());
+              Navigator.of(ctx).pop();
+            }
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('취소'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final v = controller.text.trim();
+              if (v.isNotEmpty) {
+                onAdded(v);
+                Navigator.of(ctx).pop();
+              }
+            },
+            child: const Text('추가'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -171,15 +225,30 @@ class _ScheduleInputDialogState extends State<ScheduleInputDialog> {
                         onChanged: (v) => setState(() => _childName = v),
                         hint: '자녀를 선택하세요',
                         validator: (v) => v == null ? '자녀를 선택해주세요' : null,
+                        onAddNew: () => _showAddNewDialog(
+                          label: '자녀',
+                          onAdded: (v) {
+                            dropdownProvider.addChildName(v);
+                            setState(() => _childName = v);
+                          },
+                        ),
                       ),
                       const SizedBox(height: 14),
 
                       // 학원명
-                      _buildTextField(
+                      _buildDropdown(
                         label: '학원/상호명',
-                        initialValue: _academyName,
-                        hint: '학원 이름 입력',
-                        onChanged: (v) => _academyName = v,
+                        value: _academyName,
+                        items: dropdownProvider.businessNames,
+                        onChanged: (v) => setState(() => _academyName = v),
+                        hint: '학원 이름 선택',
+                        onAddNew: () => _showAddNewDialog(
+                          label: '학원/상호명',
+                          onAdded: (v) {
+                            dropdownProvider.addBusinessName(v);
+                            setState(() => _academyName = v);
+                          },
+                        ),
                       ),
                       const SizedBox(height: 14),
 
@@ -191,6 +260,13 @@ class _ScheduleInputDialogState extends State<ScheduleInputDialog> {
                         onChanged: (v) => setState(() => _subject = v),
                         hint: '과목 선택',
                         validator: (v) => v == null ? '과목을 선택해주세요' : null,
+                        onAddNew: () => _showAddNewDialog(
+                          label: '과목',
+                          onAdded: (v) {
+                            dropdownProvider.addCustomSubject(v);
+                            setState(() => _subject = v);
+                          },
+                        ),
                       ),
                       const SizedBox(height: 14),
 
@@ -201,6 +277,13 @@ class _ScheduleInputDialogState extends State<ScheduleInputDialog> {
                         items: dropdownProvider.instructorNames,
                         onChanged: (v) => setState(() => _instructor = v),
                         hint: '강사 선택 (선택사항)',
+                        onAddNew: () => _showAddNewDialog(
+                          label: '강사',
+                          onAdded: (v) {
+                            dropdownProvider.addInstructorName(v);
+                            setState(() => _instructor = v);
+                          },
+                        ),
                       ),
                       const SizedBox(height: 16),
 
@@ -356,8 +439,10 @@ class _ScheduleInputDialogState extends State<ScheduleInputDialog> {
     required ValueChanged<String?> onChanged,
     required String hint,
     String? Function(String?)? validator,
+    VoidCallback? onAddNew,
   }) {
     final unique = items.toSet().toList();
+    final allItems = [...unique, addNewOption];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -367,11 +452,26 @@ class _ScheduleInputDialogState extends State<ScheduleInputDialog> {
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
           value: unique.contains(value) ? value : null,
-          items: unique
-              .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-              .toList(),
-          onChanged: onChanged,
-          validator: validator,
+          items: allItems.map((e) => DropdownMenuItem(
+            value: e,
+            child: Text(
+              e,
+              style: e == addNewOption
+                  ? const TextStyle(
+                      color: Colors.blue, fontWeight: FontWeight.bold)
+                  : null,
+            ),
+          )).toList(),
+          onChanged: (v) {
+            if (v == addNewOption) {
+              onAddNew?.call();
+            } else {
+              onChanged(v);
+            }
+          },
+          validator: validator != null
+              ? (v) => (v == null || v == addNewOption) ? validator(null) : validator(v)
+              : null,
           decoration: InputDecoration(
             hintText: hint,
             border: OutlineInputBorder(
