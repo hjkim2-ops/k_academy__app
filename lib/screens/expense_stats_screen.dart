@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:k_academy__app/models/expense.dart';
@@ -7,6 +8,7 @@ import 'package:k_academy__app/providers/auth_provider.dart';
 import 'package:k_academy__app/providers/child_filter_provider.dart';
 import 'package:k_academy__app/providers/expense_provider.dart';
 import 'package:k_academy__app/screens/home_screen.dart';
+import 'package:k_academy__app/services/export_service.dart';
 import 'package:k_academy__app/widgets/child_filter_dropdown.dart';
 
 class ExpenseStatsScreen extends StatefulWidget {
@@ -103,7 +105,7 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
   Map<String, int> _groupBy(List<Expense> list, String Function(Expense) key) {
     final map = <String, int>{};
     for (final e in list) {
-      map[key(e)] = (map[key(e)] ?? 0) + e.amount;
+      map[key(e)] = (map[key(e)] ?? 0) + (e.amount - e.cancellationAmount);
     }
     return map;
   }
@@ -155,9 +157,14 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
                 else ...[
                   _buildSummaryCards(filtered),
                   const SizedBox(height: 24),
-                  _buildChildChart(filtered),
+                  _buildMonthlyChart(filtered),
                   const SizedBox(height: 24),
                   _buildSubjectChart(filtered),
+                  const SizedBox(height: 24),
+                  _buildChildChart(filtered),
+                  const SizedBox(height: 24),
+                  _buildExcelButton(filtered, selectedChild),
+                  const SizedBox(height: 16),
                 ],
               ],
             ),
@@ -254,6 +261,91 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
         const SizedBox(width: 8),
         _SummaryCard(label: '실 지출', amount: net, color: Colors.green),
       ],
+    );
+  }
+
+  Widget _buildMonthlyChart(List<Expense> list) {
+    // 월별로 그룹핑 (yyyy-MM 키)
+    final byMonth = <String, int>{};
+    for (final e in list) {
+      final key = '${e.paymentDate.year}-${e.paymentDate.month.toString().padLeft(2, '0')}';
+      byMonth[key] = (byMonth[key] ?? 0) + (e.amount - e.cancellationAmount);
+    }
+    if (byMonth.isEmpty) return const SizedBox();
+
+    // 날짜순 정렬
+    final sortedKeys = byMonth.keys.toList()..sort();
+    final maxVal = byMonth.values.fold(0, max).toDouble();
+
+    return _ChartCard(
+      title: '월별 지출',
+      child: SizedBox(
+        height: 200,
+        child: BarChart(
+          BarChartData(
+            maxY: (maxVal / 10000).ceilToDouble() * 1.2,
+            barTouchData: BarTouchData(
+              touchTooltipData: BarTouchTooltipData(
+                getTooltipColor: (_) => Colors.black87,
+                getTooltipItem: (group, _, rod, __) {
+                  final key = sortedKeys[group.x];
+                  final month = int.parse(key.split('-')[1]);
+                  return BarTooltipItem(
+                    '${month}월\n${_fmt(byMonth[key]!)}원',
+                    const TextStyle(color: Colors.white, fontSize: 12),
+                  );
+                },
+              ),
+            ),
+            titlesData: FlTitlesData(
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  getTitlesWidget: (v, _) {
+                    final i = v.toInt();
+                    if (i < 0 || i >= sortedKeys.length) return const SizedBox();
+                    final month = int.parse(sortedKeys[i].split('-')[1]);
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text('${month}월',
+                          style: const TextStyle(fontSize: 11)),
+                    );
+                  },
+                ),
+              ),
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 48,
+                  getTitlesWidget: (v, _) => Text(
+                    '${v.toInt()}만',
+                    style: const TextStyle(fontSize: 10),
+                  ),
+                ),
+              ),
+              topTitles:
+                  const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              rightTitles:
+                  const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            ),
+            gridData: const FlGridData(show: true),
+            borderData: FlBorderData(show: false),
+            barGroups: sortedKeys.asMap().entries.map((e) {
+              return BarChartGroupData(
+                x: e.key,
+                barRods: [
+                  BarChartRodData(
+                    toY: byMonth[e.value]!.toDouble() / 10000,
+                    color: Colors.indigo,
+                    width: 28,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ],
+              );
+            }).toList(),
+          ),
+        ),
+      ),
     );
   }
 
@@ -407,6 +499,38 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
             }).toList(),
           ),
         ],
+      ),
+    );
+  }
+
+  String _periodLabel() {
+    if (_period == '기간 설정' && _customRange != null) {
+      final s = _customRange!.start;
+      final e = _customRange!.end;
+      return '${s.year}.${s.month.toString().padLeft(2, '0')}.${s.day.toString().padLeft(2, '0')}'
+          ' ~ ${e.year}.${e.month.toString().padLeft(2, '0')}.${e.day.toString().padLeft(2, '0')}';
+    }
+    return _period;
+  }
+
+  Widget _buildExcelButton(List<Expense> filtered, String? selectedChild) {
+    return Center(
+      child: ElevatedButton.icon(
+        onPressed: () {
+          ExportService.exportToExcel(
+            filtered,
+            childName: selectedChild,
+            periodLabel: _periodLabel(),
+          );
+        },
+        icon: const Icon(Icons.download, size: 18),
+        label: const Text('Excel 다운로드',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.lightGreen,
+          foregroundColor: Colors.black,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        ),
       ),
     );
   }

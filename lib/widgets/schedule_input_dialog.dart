@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:table_calendar/table_calendar.dart';
 import 'package:uuid/uuid.dart';
 import 'package:k_academy__app/models/schedule.dart';
 import 'package:k_academy__app/providers/dropdown_provider.dart';
@@ -27,6 +28,7 @@ class _ScheduleInputDialogState extends State<ScheduleInputDialog> {
   TimeOfDay _endTime = const TimeOfDay(hour: 17, minute: 0);
   int _colorValue = 0xFF2196F3;
   String _memo = '';
+  Set<String> _cancelledDates = {};
 
   bool get _isEditing => widget.existingSchedule != null;
 
@@ -46,6 +48,7 @@ class _ScheduleInputDialogState extends State<ScheduleInputDialog> {
       _endTime = s.endTime;
       _colorValue = s.colorValue;
       _memo = s.memo ?? '';
+      _cancelledDates = s.cancelledDates.toSet();
     }
   }
 
@@ -66,6 +69,189 @@ class _ScheduleInputDialogState extends State<ScheduleInputDialog> {
         }
       });
     }
+  }
+
+  void _showCancelledDatesCalendar() {
+    final selectedDays = Set<int>.from(_selectedDays);
+    var tempCancelled = Set<String>.from(_cancelledDates);
+    final now = DateTime.now();
+    var focusedDay = now;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return AlertDialog(
+            title: const Text('휴강 날짜 선택', style: TextStyle(fontSize: 16)),
+            contentPadding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+            content: SizedBox(
+              width: 360,
+              height: 400,
+              child: TableCalendar(
+                locale: 'ko_KR',
+                firstDay: DateTime(now.year, now.month - 3, 1),
+                lastDay: DateTime(now.year + 1, 12, 31),
+                focusedDay: focusedDay,
+                calendarFormat: CalendarFormat.month,
+                startingDayOfWeek: StartingDayOfWeek.monday,
+                headerStyle: const HeaderStyle(
+                  formatButtonVisible: false,
+                  titleCentered: true,
+                ),
+                calendarStyle: CalendarStyle(
+                  outsideDaysVisible: false,
+                  todayDecoration: BoxDecoration(
+                    color: Colors.blue.withValues(alpha: 0.3),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                onPageChanged: (day) {
+                  setDialogState(() => focusedDay = day);
+                },
+                calendarBuilders: CalendarBuilders(
+                  defaultBuilder: (context, day, focusedDay) {
+                    final dateStr =
+                        '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+                    final isSelectedDay = selectedDays.contains(day.weekday);
+                    final isCancelled = tempCancelled.contains(dateStr);
+
+                    if (!isSelectedDay) return null; // default rendering
+
+                    return GestureDetector(
+                      onTap: () {
+                        setDialogState(() {
+                          if (isCancelled) {
+                            tempCancelled.remove(dateStr);
+                          } else {
+                            tempCancelled.add(dateStr);
+                          }
+                        });
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: isCancelled
+                              ? Colors.red.withValues(alpha: 0.15)
+                              : Color(_colorValue).withValues(alpha: 0.25),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: isCancelled
+                              ? Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    Text('${day.day}',
+                                        style: const TextStyle(
+                                            color: Colors.red,
+                                            decoration:
+                                                TextDecoration.lineThrough)),
+                                    const Icon(Icons.close,
+                                        color: Colors.red, size: 14),
+                                  ],
+                                )
+                              : Text('${day.day}',
+                                  style: TextStyle(
+                                      color: Color(_colorValue),
+                                      fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    );
+                  },
+                  todayBuilder: (context, day, focusedDay) {
+                    final dateStr =
+                        '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+                    final isSelectedDay = selectedDays.contains(day.weekday);
+                    final isCancelled = tempCancelled.contains(dateStr);
+
+                    if (!isSelectedDay) {
+                      return Container(
+                        margin: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withValues(alpha: 0.3),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text('${day.day}',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold)),
+                        ),
+                      );
+                    }
+
+                    return GestureDetector(
+                      onTap: () {
+                        setDialogState(() {
+                          if (isCancelled) {
+                            tempCancelled.remove(dateStr);
+                          } else {
+                            tempCancelled.add(dateStr);
+                          }
+                        });
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: isCancelled
+                              ? Colors.red.withValues(alpha: 0.15)
+                              : Color(_colorValue).withValues(alpha: 0.25),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                              color: Colors.blue, width: 1.5),
+                        ),
+                        child: Center(
+                          child: isCancelled
+                              ? Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    Text('${day.day}',
+                                        style: const TextStyle(
+                                            color: Colors.red,
+                                            decoration:
+                                                TextDecoration.lineThrough)),
+                                    const Icon(Icons.close,
+                                        color: Colors.red, size: 14),
+                                  ],
+                                )
+                              : Text('${day.day}',
+                                  style: TextStyle(
+                                      color: Color(_colorValue),
+                                      fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                onDaySelected: (selectedDay, focused) {
+                  if (!selectedDays.contains(selectedDay.weekday)) return;
+                  final dateStr =
+                      '${selectedDay.year}-${selectedDay.month.toString().padLeft(2, '0')}-${selectedDay.day.toString().padLeft(2, '0')}';
+                  setDialogState(() {
+                    if (tempCancelled.contains(dateStr)) {
+                      tempCancelled.remove(dateStr);
+                    } else {
+                      tempCancelled.add(dateStr);
+                    }
+                  });
+                },
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('취소'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() => _cancelledDates = tempCancelled);
+                  Navigator.of(ctx).pop();
+                },
+                child: const Text('확인'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 
   Future<void> _save() async {
@@ -111,10 +297,16 @@ class _ScheduleInputDialogState extends State<ScheduleInputDialog> {
         endMinute: _endTime.minute,
         colorValue: _colorValue,
         memo: _memo.isEmpty ? null : _memo,
+        cancelledDates: _cancelledDates.toList(),
       );
       provider.updateSchedule(updated);
     } else {
       for (final day in _selectedDays) {
+        // Filter cancelledDates to only those matching this dayOfWeek
+        final dayCancelled = _cancelledDates.where((dateStr) {
+          final parsed = DateTime.tryParse(dateStr);
+          return parsed != null && parsed.weekday == day;
+        }).toList();
         provider.addSchedule(Schedule(
           id: const Uuid().v4(),
           childName: _childName!,
@@ -129,6 +321,7 @@ class _ScheduleInputDialogState extends State<ScheduleInputDialog> {
           colorValue: _colorValue,
           isActive: true,
           memo: _memo.isEmpty ? null : _memo,
+          cancelledDates: dayCancelled,
         ));
       }
     }
@@ -391,6 +584,42 @@ class _ScheduleInputDialogState extends State<ScheduleInputDialog> {
                       ),
                       const SizedBox(height: 14),
 
+                      // 휴강 날짜
+                      Row(
+                        children: [
+                          const Text('휴강 날짜',
+                              style: TextStyle(
+                                  fontSize: 13, fontWeight: FontWeight.bold)),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: const Icon(Icons.calendar_month, size: 20),
+                            onPressed: _selectedDays.isEmpty
+                                ? null
+                                : _showCancelledDatesCalendar,
+                            tooltip: '휴강 날짜 선택',
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                          const Spacer(),
+                          if (_cancelledDates.isNotEmpty)
+                            Text(
+                              '${_cancelledDates.length}일 선택됨',
+                              style: TextStyle(
+                                  fontSize: 12, color: Colors.red[400]),
+                            ),
+                        ],
+                      ),
+                      if (_selectedDays.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            '요일을 먼저 선택하세요',
+                            style: TextStyle(
+                                fontSize: 11, color: Colors.grey[500]),
+                          ),
+                        ),
+                      const SizedBox(height: 14),
+
                       // 메모
                       _buildTextField(
                         label: '메모',
@@ -441,8 +670,8 @@ class _ScheduleInputDialogState extends State<ScheduleInputDialog> {
     String? Function(String?)? validator,
     VoidCallback? onAddNew,
   }) {
-    final unique = items.toSet().toList();
-    final allItems = [...unique, addNewOption];
+    final unique = items.toSet().where((e) => e != etcOption).toList();
+    final allItems = [...unique, etcOption, addNewOption];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

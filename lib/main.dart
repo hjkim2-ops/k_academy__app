@@ -9,6 +9,7 @@ import 'package:k_academy__app/providers/child_filter_provider.dart';
 import 'package:k_academy__app/providers/expense_provider.dart';
 import 'package:k_academy__app/providers/schedule_provider.dart';
 import 'package:k_academy__app/providers/dropdown_provider.dart';
+import 'package:k_academy__app/providers/selected_date_provider.dart';
 import 'package:k_academy__app/screens/splash_screen.dart';
 
 void main() async {
@@ -51,11 +52,16 @@ class MyApp extends StatelessWidget {
           },
         ),
 
-        ChangeNotifierProvider(
+        ChangeNotifierProxyProvider<AuthProvider, DropdownProvider>(
           create: (_) => DropdownProvider()..loadAllDropdownData(),
+          update: (_, auth, dropdown) {
+            dropdown!.onAuthChanged(auth.isTrialMode, auth.user?.uid);
+            return dropdown;
+          },
         ),
 
         ChangeNotifierProvider(create: (_) => ChildFilterProvider()),
+        ChangeNotifierProvider(create: (_) => SelectedDateProvider()),
       ],
       child: MaterialApp(
         title: 'K-학원',

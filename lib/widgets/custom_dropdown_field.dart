@@ -24,11 +24,20 @@ class CustomDropdownField extends StatelessWidget {
     // Remove duplicates from options list
     final uniqueOptions = options.toSet().toList();
 
-    // Add "새로 추가" option to the list
-    final allOptions = [...uniqueOptions, addNewOption];
+    // Ensure current value is in the options (for editing old entries)
+    if (value != null && value!.isNotEmpty && !uniqueOptions.contains(value)) {
+      uniqueOptions.insert(0, value!);
+    }
+
+    // Add "기타" and "새로 추가" options to the list
+    final allOptions = [
+      ...uniqueOptions.where((o) => o != etcOption),
+      etcOption,
+      addNewOption,
+    ];
 
     return DropdownButtonFormField<String>(
-      initialValue: value,
+      value: value,
       decoration: InputDecoration(
         labelText: required ? '$label *' : label,
         border: const OutlineInputBorder(),

@@ -30,13 +30,14 @@ class ScheduleAdapter extends TypeAdapter<Schedule> {
       colorValue: fields[10] as int,
       isActive: fields[11] as bool,
       memo: fields[12] as String?,
+      cancelledDates: (fields[13] as List?)?.cast<String>() ?? [],
     );
   }
 
   @override
   void write(BinaryWriter writer, Schedule obj) {
     writer
-      ..writeByte(13)
+      ..writeByte(14)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -62,7 +63,9 @@ class ScheduleAdapter extends TypeAdapter<Schedule> {
       ..writeByte(11)
       ..write(obj.isActive)
       ..writeByte(12)
-      ..write(obj.memo);
+      ..write(obj.memo)
+      ..writeByte(13)
+      ..write(obj.cancelledDates);
   }
 
   @override

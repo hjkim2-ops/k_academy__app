@@ -62,5 +62,6 @@ const List<int> scheduleColorValues = [
   0xFF00BCD4, // Cyan
 ];
 
-// "새로 추가" 상수
+// "기타" 및 "새로 추가" 상수
+const String etcOption = '기타';
 const String addNewOption = '+ 새로 추가';

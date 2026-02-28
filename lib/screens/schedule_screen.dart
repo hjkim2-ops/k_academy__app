@@ -1,10 +1,12 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:k_academy__app/models/schedule.dart';
 import 'package:k_academy__app/providers/auth_provider.dart';
 import 'package:k_academy__app/providers/child_filter_provider.dart';
 import 'package:k_academy__app/providers/schedule_provider.dart';
+import 'package:k_academy__app/providers/selected_date_provider.dart';
 import 'package:k_academy__app/screens/home_screen.dart';
 import 'package:k_academy__app/widgets/child_filter_dropdown.dart';
 import 'package:k_academy__app/widgets/schedule_input_dialog.dart';
@@ -30,7 +32,33 @@ class _ScheduleScreenState extends State<ScheduleScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
+  }
+
+  DateTime _getWeekStart(DateTime date) {
+    // Returns the Monday of the week containing [date]
+    return date.subtract(Duration(days: date.weekday - 1));
+  }
+
+  bool _isToday(DateTime date) {
+    final now = DateTime.now();
+    return date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day;
+  }
+
+  Future<void> _pickWeekDate() async {
+    final dateProv = context.read<SelectedDateProvider>();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: dateProv.selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+      helpText: '선택한 날짜를 포함한 주\n(월요일부터 일요일)가 선택됩니다',
+    );
+    if (picked != null) {
+      dateProv.selectDate(picked);
+    }
   }
 
   @override
@@ -42,6 +70,8 @@ class _ScheduleScreenState extends State<ScheduleScreen>
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+    final weekStartDate =
+        _getWeekStart(context.watch<SelectedDateProvider>().selectedDate);
 
     return Scaffold(
       appBar: AppBar(
@@ -71,6 +101,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
           controller: _tabController,
           tabs: const [
             Tab(icon: Icon(Icons.grid_view), text: '시간표'),
+            Tab(icon: Icon(Icons.view_week), text: '이번주'),
             Tab(icon: Icon(Icons.list), text: '목록'),
           ],
         ),
@@ -90,6 +121,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                   controller: _tabController,
                   children: [
                     _buildTimetable(schedules),
+                    _buildWeeklyTimetable(schedules, weekStartDate),
                     _buildList(provider, schedules),
                   ],
                 ),
@@ -107,11 +139,97 @@ class _ScheduleScreenState extends State<ScheduleScreen>
     );
   }
 
+  // ────────────────── 공통 그리드 렌더링 ──────────────────
+  Widget _buildGrid(List<Schedule> schedules) {
+    final totalHeight = (_endHour - _startHour) * _pixelsPerHour;
+
+    return Expanded(
+      child: SingleChildScrollView(
+        child: SizedBox(
+          height: totalHeight,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 시간 레이블
+              SizedBox(
+                width: _timeColWidth,
+                child: Stack(
+                  children: List.generate(_endHour - _startHour, (i) {
+                    return Positioned(
+                      top: i * _pixelsPerHour - 7,
+                      right: 4,
+                      child: Text(
+                        '${_startHour + i}',
+                        style:
+                            TextStyle(fontSize: 10, color: Colors.grey[500]),
+                      ),
+                    );
+                  }),
+                ),
+              ),
+              // 그리드 + 블록
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final colWidth = constraints.maxWidth / 7;
+                    return Stack(
+                      children: [
+                        // 시간 구분선
+                        ...List.generate(
+                            _endHour - _startHour,
+                            (i) => Positioned(
+                                  top: i * _pixelsPerHour,
+                                  left: 0,
+                                  right: 0,
+                                  child: Divider(
+                                      height: 0, color: Colors.grey[200]),
+                                )),
+                        // 요일 구분선
+                        ...List.generate(
+                            7,
+                            (i) => Positioned(
+                                  left: i * colWidth,
+                                  top: 0,
+                                  bottom: 0,
+                                  child: VerticalDivider(
+                                      width: 0, color: Colors.grey[200]),
+                                )),
+                        // 시간표 블록
+                        ...schedules.map((s) {
+                          final top = (s.startHour - _startHour) *
+                                  _pixelsPerHour +
+                              s.startMinute * _pixelsPerHour / 60;
+                          final height = max(
+                              s.durationMinutes * _pixelsPerHour / 60,
+                              18.0);
+                          final left = (s.dayOfWeek - 1) * colWidth + 1;
+                          return Positioned(
+                            top: top,
+                            left: left,
+                            width: colWidth - 2,
+                            height: height,
+                            child: _ScheduleBlock(
+                              schedule: s,
+                              blockHeight: height,
+                              onTap: () => _showOptions(context, s),
+                            ),
+                          );
+                        }),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   // ────────────────── 시간표 뷰 ──────────────────
   Widget _buildTimetable(List<Schedule> schedules) {
     if (schedules.isEmpty) return _buildEmpty();
-
-    final totalHeight = (_endHour - _startHour) * _pixelsPerHour;
 
     return Column(
       children: [
@@ -140,90 +258,118 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                 )),
           ],
         ),
-        // 스크롤 영역
-        Expanded(
-          child: SingleChildScrollView(
-            child: SizedBox(
-              height: totalHeight,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 시간 레이블
-                  SizedBox(
-                    width: _timeColWidth,
-                    child: Stack(
-                      children: List.generate(_endHour - _startHour, (i) {
-                        return Positioned(
-                          top: i * _pixelsPerHour - 7,
-                          right: 4,
-                          child: Text(
-                            '${_startHour + i}',
-                            style: TextStyle(
-                                fontSize: 10, color: Colors.grey[500]),
-                          ),
-                        );
-                      }),
-                    ),
-                  ),
-                  // 그리드 + 블록
-                  Expanded(
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final colWidth = constraints.maxWidth / 7;
-                        return Stack(
-                          children: [
-                            // 시간 구분선
-                            ...List.generate(_endHour - _startHour, (i) =>
-                              Positioned(
-                                top: i * _pixelsPerHour,
-                                left: 0,
-                                right: 0,
-                                child: Divider(
-                                    height: 0,
-                                    color: Colors.grey[200]),
-                              )),
-                            // 요일 구분선
-                            ...List.generate(7, (i) =>
-                              Positioned(
-                                left: i * colWidth,
-                                top: 0,
-                                bottom: 0,
-                                child: VerticalDivider(
-                                    width: 0,
-                                    color: Colors.grey[200]),
-                              )),
-                            // 시간표 블록
-                            ...schedules.map((s) {
-                              final top = (s.startHour - _startHour) *
-                                      _pixelsPerHour +
-                                  s.startMinute * _pixelsPerHour / 60;
-                              final height = max(
-                                  s.durationMinutes * _pixelsPerHour / 60,
-                                  18.0);
-                              final left = (s.dayOfWeek - 1) * colWidth + 1;
-                              return Positioned(
-                                top: top,
-                                left: left,
-                                width: colWidth - 2,
-                                height: height,
-                                child: _ScheduleBlock(
-                                  schedule: s,
-                                  blockHeight: height,
-                                  onTap: () =>
-                                      _showOptions(context, s),
-                                ),
-                              );
-                            }),
-                          ],
-                        );
-                      },
-                    ),
-                  ),
-                ],
+        _buildGrid(schedules),
+      ],
+    );
+  }
+
+  // ────────────────── 이번주 시간표 뷰 ──────────────────
+  Widget _buildWeeklyTimetable(
+      List<Schedule> schedules, DateTime weekStartDate) {
+    if (schedules.isEmpty) return _buildEmpty();
+
+    // Filter: exclude schedules cancelled on this week's date
+    final filtered = schedules.where((s) {
+      final date = weekStartDate.add(Duration(days: s.dayOfWeek - 1));
+      return !s.isCancelledOn(date);
+    }).toList();
+
+    final weekEnd = weekStartDate.add(const Duration(days: 6));
+    final dateFormat = DateFormat('M/d');
+    final dateProv = context.read<SelectedDateProvider>();
+
+    return Column(
+      children: [
+        // 주 탐색 헤더
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.chevron_left),
+                onPressed: () => dateProv.selectDate(
+                    weekStartDate.subtract(const Duration(days: 7))),
+                tooltip: '이전 주',
               ),
-            ),
+              Expanded(
+                child: GestureDetector(
+                  onTap: _pickWeekDate,
+                  child: Text(
+                    '${dateFormat.format(weekStartDate)} ~ ${dateFormat.format(weekEnd)}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.calendar_month, size: 20),
+                onPressed: _pickWeekDate,
+                tooltip: '날짜 선택',
+              ),
+              IconButton(
+                icon: const Icon(Icons.chevron_right),
+                onPressed: () => dateProv.selectDate(
+                    weekStartDate.add(const Duration(days: 7))),
+                tooltip: '다음 주',
+              ),
+            ],
           ),
         ),
+        // 요일+날짜 헤더
+        Row(
+          children: [
+            SizedBox(width: _timeColWidth),
+            ...List.generate(7, (i) {
+              final date = weekStartDate.add(Duration(days: i));
+              final today = _isToday(date);
+              return Expanded(
+                child: Container(
+                  height: 36,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: today
+                        ? Theme.of(context)
+                            .primaryColor
+                            .withValues(alpha: 0.1)
+                        : null,
+                    border: Border(
+                        bottom: BorderSide(color: Colors.grey[300]!)),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        _days[i],
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: today
+                              ? Theme.of(context).primaryColor
+                              : (i == 5)
+                                  ? Colors.blue
+                                  : (i == 6)
+                                      ? Colors.red
+                                      : null,
+                        ),
+                      ),
+                      Text(
+                        '${date.month}/${date.day}',
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: today
+                              ? Theme.of(context).primaryColor
+                              : Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ],
+        ),
+        _buildGrid(filtered),
       ],
     );
   }

@@ -5,10 +5,10 @@ import 'package:k_academy__app/models/expense.dart';
 import 'package:k_academy__app/providers/auth_provider.dart';
 import 'package:k_academy__app/providers/child_filter_provider.dart';
 import 'package:k_academy__app/providers/expense_provider.dart';
+import 'package:k_academy__app/providers/selected_date_provider.dart';
 import 'package:k_academy__app/widgets/child_filter_dropdown.dart';
 import 'package:k_academy__app/screens/home_screen.dart';
 import 'package:k_academy__app/widgets/expense_input_dialog.dart';
-import 'package:k_academy__app/services/export_service.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -105,9 +105,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         _selectedDay = selectedDay;
                         _focusedDay = focusedDay;
                       });
+                      context
+                          .read<SelectedDateProvider>()
+                          .selectDate(selectedDay);
                     },
                     onPageChanged: (focusedDay) {
-                      _focusedDay = focusedDay;
+                      setState(() {
+                        _focusedDay = focusedDay;
+                        _selectedDay = null;
+                      });
                     },
                     eventLoader: (day) {
                       final all = expenseProvider.getExpensesForDate(day);
@@ -155,6 +161,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         );
                       },
                     ),
+                    onHeaderTapped: (_) {
+                      setState(() {
+                        _selectedDay = null;
+                      });
+                    },
                     headerStyle: const HeaderStyle(
                       formatButtonVisible: false,
                       titleCentered: true,
@@ -175,25 +186,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   Expanded(child: _buildExpenseList(expenseProvider, selectedChild)),
                 ],
               ),
-              // Excel 내보내기 버튼
-              Positioned(
-                left: 16,
-                bottom: 16,
-                child: ElevatedButton(
-                  onPressed: () {
-                    final expenses = expenseProvider.getAllExpenses();
-                    ExportService.exportToExcel(expenses);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.lightGreen,
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 12),
-                  ),
-                  child: const Text('Excel',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-              ),
+
+
             ],
           );
         },
@@ -276,17 +270,45 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget _buildExpenseList(ExpenseProvider expenseProvider, String? selectedChild) {
-    if (_selectedDay == null) {
-      return const Center(child: Text('날짜를 선택해주세요'));
+    List<Expense> expenses;
+    String emptyMessage;
+
+    if (_selectedDay != null) {
+      // 특정 날짜 선택 시: 해당 날짜의 지출만 표시
+      expenses = expenseProvider.getExpensesForDate(_selectedDay!);
+      emptyMessage = '이 날짜에 지출 내역이 없습니다';
+    } else {
+      // 월 변경 시 (날짜 미선택): 해당 월 전체 지출 표시
+      expenses = expenseProvider.getAllExpenses().where((e) =>
+          e.paymentDate.year == _focusedDay.year &&
+          e.paymentDate.month == _focusedDay.month).toList();
+      expenses.sort((a, b) => a.paymentDate.compareTo(b.paymentDate));
+      emptyMessage = '이 달에 지출 내역이 없습니다';
     }
 
-    final all = expenseProvider.getExpensesForDate(_selectedDay!);
-    final expenses = selectedChild == null
-        ? all
-        : all.where((e) => e.childName == selectedChild).toList();
+    if (selectedChild != null) {
+      expenses = expenses.where((e) => e.childName == selectedChild).toList();
+    }
 
     if (expenses.isEmpty) {
-      return const Center(child: Text('이 날짜에 지출 내역이 없습니다'));
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              emptyMessage,
+              style: const TextStyle(fontSize: 13, color: Colors.black),
+            ),
+            if (_selectedDay != null) ...[
+              const SizedBox(height: 8),
+              const Text(
+                '이달의 지출 내역을 보려면 캘린더의 월을 클릭하세요',
+                style: TextStyle(fontSize: 13, color: Colors.black),
+              ),
+            ],
+          ],
+        ),
+      );
     }
 
     return ListView.builder(
@@ -305,6 +327,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // 월 전체 보기일 때 날짜 표시
+                if (_selectedDay == null)
+                  Text(
+                    '${expense.paymentDate.month}/${expense.paymentDate.day}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
                 Text('강사: ${expense.instructor}'),
                 Text('상호: ${expense.businessName}'),
                 Text('세부내역: ${expense.detail}'),

@@ -92,24 +92,40 @@ class _ExpenseInputDialogState extends State<ExpenseInputDialog> {
     final dropdownProvider = Provider.of<DropdownProvider>(context);
 
     return Dialog(
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 600, maxHeight: 700),
-        child: Scaffold(
-          appBar: AppBar(
-            title: Text(widget.existingExpense != null ? '지출 수정' : '지출 입력'),
-            automaticallyImplyLeading: false,
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => Navigator.of(context).pop(),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 480, maxHeight: 640),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 헤더
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 8, 0),
+              child: Row(
+                children: [
+                  Text(
+                    widget.existingExpense != null ? '지출 수정' : '지출 입력',
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
               ),
-            ],
-          ),
-          body: Form(
-            key: _formKey,
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
+            ),
+            const Divider(height: 1),
+            // 폼
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                 // 1. 자녀
                 CustomDropdownField(
                   label: '자녀',
@@ -168,18 +184,24 @@ class _ExpenseInputDialogState extends State<ExpenseInputDialog> {
 
                 // 4. 과목
                 DropdownButtonFormField<String>(
-                  initialValue: _subject,
+                  value: _subject,
                   decoration: const InputDecoration(
                     labelText: '과목 *',
                     border: OutlineInputBorder(),
                   ),
                   items: [
-                    ...dropdownProvider.allSubjects.map((subject) {
+                    ..._ensureValueInList(_subject, dropdownProvider.allSubjects)
+                        .where((s) => s != etcOption)
+                        .map((subject) {
                       return DropdownMenuItem<String>(
                         value: subject,
                         child: Text(subject),
                       );
                     }),
+                    const DropdownMenuItem<String>(
+                      value: etcOption,
+                      child: Text(etcOption),
+                    ),
                     const DropdownMenuItem<String>(
                       value: addNewOption,
                       child: Text(
@@ -230,18 +252,24 @@ class _ExpenseInputDialogState extends State<ExpenseInputDialog> {
 
                 // 6. 세부내역
                 DropdownButtonFormField<String>(
-                  initialValue: _detail,
+                  value: _detail,
                   decoration: const InputDecoration(
                     labelText: '세부내역 *',
                     border: OutlineInputBorder(),
                   ),
                   items: [
-                    ...dropdownProvider.allDetails.map((detail) {
+                    ..._ensureValueInList(_detail, dropdownProvider.allDetails)
+                        .where((d) => d != etcOption)
+                        .map((detail) {
                       return DropdownMenuItem<String>(
                         value: detail,
                         child: Text(detail),
                       );
                     }),
+                    const DropdownMenuItem<String>(
+                      value: etcOption,
+                      child: Text(etcOption),
+                    ),
                     const DropdownMenuItem<String>(
                       value: addNewOption,
                       child: Text(
@@ -315,18 +343,24 @@ class _ExpenseInputDialogState extends State<ExpenseInputDialog> {
 
                 // 8. 결제방법
                 DropdownButtonFormField<String>(
-                  initialValue: _paymentMethod,
+                  value: _paymentMethod,
                   decoration: const InputDecoration(
                     labelText: '결제방법 *',
                     border: OutlineInputBorder(),
                   ),
                   items: [
-                    ...dropdownProvider.allPaymentMethods.map((method) {
+                    ..._ensureValueInList(_paymentMethod, dropdownProvider.allPaymentMethods)
+                        .where((m) => m != etcOption)
+                        .map((method) {
                       return DropdownMenuItem<String>(
                         value: method,
                         child: Text(method),
                       );
                     }),
+                    const DropdownMenuItem<String>(
+                      value: etcOption,
+                      child: Text(etcOption),
+                    ),
                     const DropdownMenuItem<String>(
                       value: addNewOption,
                       child: Text(
@@ -362,12 +396,18 @@ class _ExpenseInputDialogState extends State<ExpenseInputDialog> {
                       border: OutlineInputBorder(),
                     ),
                     items: [
-                      ...dropdownProvider.cardNames.map((name) {
+                      ..._ensureValueInList(_cardName, dropdownProvider.cardNames)
+                          .where((n) => n != etcOption)
+                          .map((name) {
                         return DropdownMenuItem<String>(
                           value: name,
                           child: Text(name),
                         );
                       }),
+                      const DropdownMenuItem<String>(
+                        value: etcOption,
+                        child: Text(etcOption),
+                      ),
                       const DropdownMenuItem<String>(
                         value: addNewOption,
                         child: Text(
@@ -451,41 +491,52 @@ class _ExpenseInputDialogState extends State<ExpenseInputDialog> {
                 ),
                 const SizedBox(height: 24),
 
-                // Buttons
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Delete button (only in edit mode)
-                    if (widget.existingExpense != null)
-                      TextButton(
-                        onPressed: _deleteExpense,
-                        style: TextButton.styleFrom(foregroundColor: Colors.red),
-                        child: const Text('삭제'),
-                      )
-                    else
-                      const SizedBox.shrink(),
-                    // Right side buttons
-                    Row(
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: const Text('취소'),
-                        ),
-                        const SizedBox(width: 8),
-                        ElevatedButton(
-                          onPressed: _saveExpense,
-                          child: const Text('저장'),
-                        ),
-                      ],
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ],
+              ),
             ),
-          ),
+            const Divider(height: 1),
+            // 버튼
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  // 삭제 버튼 (수정 모드에서만)
+                  if (widget.existingExpense != null)
+                    TextButton(
+                      onPressed: _deleteExpense,
+                      style: TextButton.styleFrom(foregroundColor: Colors.red),
+                      child: const Text('삭제'),
+                    ),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('취소'),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: _saveExpense,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).primaryColor,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: Text(widget.existingExpense != null ? '수정' : '저장'),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  /// Ensures the given value is present in the list.
+  /// If not, inserts it at the beginning so DropdownButtonFormField won't assert.
+  List<String> _ensureValueInList(String? value, List<String> list) {
+    if (value == null || value.isEmpty || list.contains(value)) return list;
+    return [value, ...list];
   }
 
   Future<void> _selectDate(BuildContext context) async {

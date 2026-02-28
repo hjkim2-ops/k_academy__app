@@ -24,6 +24,16 @@ class ScheduleProvider with ChangeNotifier {
   List<Schedule> schedulesForChild(String childName) =>
       activeSchedules.where((s) => s.childName == childName).toList();
 
+  /// Returns active schedules for a specific date, excluding cancelled ones.
+  List<Schedule> schedulesForDate(DateTime date) {
+    final weekday = date.weekday; // 1=Mon ... 7=Sun
+    return activeSchedules
+        .where((s) => s.dayOfWeek == weekday && !s.isCancelledOn(date))
+        .toList()
+      ..sort((a, b) => (a.startHour * 60 + a.startMinute)
+          .compareTo(b.startHour * 60 + b.startMinute));
+  }
+
   List<String> get childNames =>
       _schedules.map((s) => s.childName).toSet().toList();
 
@@ -66,6 +76,20 @@ class ScheduleProvider with ChangeNotifier {
     final idx = _schedules.indexWhere((s) => s.id == schedule.id);
     if (idx >= 0) _schedules[idx] = schedule;
     notifyListeners();
+  }
+
+  Future<void> toggleCancelledDate(String scheduleId, String dateStr) async {
+    final idx = _schedules.indexWhere((s) => s.id == scheduleId);
+    if (idx < 0) return;
+    final schedule = _schedules[idx];
+    final dates = List<String>.from(schedule.cancelledDates);
+    if (dates.contains(dateStr)) {
+      dates.remove(dateStr);
+    } else {
+      dates.add(dateStr);
+    }
+    final updated = schedule.copyWith(cancelledDates: dates);
+    await updateSchedule(updated);
   }
 
   Future<void> deleteSchedule(String id) async {
