@@ -329,7 +329,15 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
                   const AxisTitles(sideTitles: SideTitles(showTitles: false)),
             ),
             gridData: const FlGridData(show: true),
-            borderData: FlBorderData(show: false),
+            borderData: FlBorderData(
+              show: true,
+              border: const Border(
+                left: BorderSide(color: Colors.black54),
+                bottom: BorderSide(color: Colors.black54),
+                top: BorderSide.none,
+                right: BorderSide.none,
+              ),
+            ),
             barGroups: sortedKeys.asMap().entries.map((e) {
               return BarChartGroupData(
                 x: e.key,
@@ -410,7 +418,15 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
                 const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           ),
           gridData: const FlGridData(show: true),
-          borderData: FlBorderData(show: false),
+          borderData: FlBorderData(
+            show: true,
+            border: const Border(
+              left: BorderSide(color: Colors.black54),
+              bottom: BorderSide(color: Colors.black54),
+              top: BorderSide.none,
+              right: BorderSide.none,
+            ),
+          ),
           barGroups: children.asMap().entries.map((e) {
             return BarChartGroupData(
               x: e.key,

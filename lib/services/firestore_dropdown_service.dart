@@ -24,6 +24,10 @@ class FirestoreDropdownService {
       'customDetails': List<String>.from(data['customDetails'] ?? []),
       'cardNames': List<String>.from(data['cardNames'] ?? []),
       'customPaymentMethods': List<String>.from(data['customPaymentMethods'] ?? []),
+      'hiddenSubjects': List<String>.from(data['hiddenSubjects'] ?? []),
+      'hiddenDetails': List<String>.from(data['hiddenDetails'] ?? []),
+      'hiddenPaymentMethods': List<String>.from(data['hiddenPaymentMethods'] ?? []),
+      'childNameOrder': List<String>.from(data['childNameOrder'] ?? []),
     };
   }
 
@@ -36,6 +40,10 @@ class FirestoreDropdownService {
     required List<String> customDetails,
     required List<String> cardNames,
     required List<String> customPaymentMethods,
+    required List<String> hiddenSubjects,
+    required List<String> hiddenDetails,
+    required List<String> hiddenPaymentMethods,
+    required List<String> childNameOrder,
   }) async {
     await _doc.set({
       'childNames': childNames,
@@ -45,6 +53,10 @@ class FirestoreDropdownService {
       'customDetails': customDetails,
       'cardNames': cardNames,
       'customPaymentMethods': customPaymentMethods,
+      'hiddenSubjects': hiddenSubjects,
+      'hiddenDetails': hiddenDetails,
+      'hiddenPaymentMethods': hiddenPaymentMethods,
+      'childNameOrder': childNameOrder,
     });
   }
 }

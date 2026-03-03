@@ -142,6 +142,12 @@ class _ExpenseInputDialogState extends State<ExpenseInputDialog> {
                       _childName = value;
                     });
                   },
+                  onItemDeleted: (value) {
+                    dropdownProvider.removeChildName(value);
+                    if (_childName == value) {
+                      setState(() => _childName = null);
+                    }
+                  },
                 ),
                 const SizedBox(height: 16),
 
@@ -179,54 +185,36 @@ class _ExpenseInputDialogState extends State<ExpenseInputDialog> {
                       _businessName = value;
                     });
                   },
+                  onItemDeleted: (value) {
+                    dropdownProvider.removeBusinessName(value);
+                    if (_businessName == value) {
+                      setState(() => _businessName = null);
+                    }
+                  },
                 ),
                 const SizedBox(height: 16),
 
                 // 4. 과목
-                DropdownButtonFormField<String>(
+                CustomDropdownField(
+                  label: '과목',
                   value: _subject,
-                  decoration: const InputDecoration(
-                    labelText: '과목 *',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: [
-                    ..._ensureValueInList(_subject, dropdownProvider.allSubjects)
-                        .where((s) => s != etcOption)
-                        .map((subject) {
-                      return DropdownMenuItem<String>(
-                        value: subject,
-                        child: Text(subject),
-                      );
-                    }),
-                    const DropdownMenuItem<String>(
-                      value: etcOption,
-                      child: Text(etcOption),
-                    ),
-                    const DropdownMenuItem<String>(
-                      value: addNewOption,
-                      child: Text(
-                        addNewOption,
-                        style: TextStyle(
-                          color: Colors.blue,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
+                  options: dropdownProvider.allSubjects,
                   onChanged: (value) {
-                    if (value == addNewOption) {
-                      _showAddCustomSubjectDialog(context, dropdownProvider);
-                    } else {
-                      setState(() {
-                        _subject = value;
-                      });
-                    }
+                    setState(() {
+                      _subject = value;
+                    });
                   },
-                  validator: (value) {
-                    if (value == null || value.isEmpty || value == addNewOption) {
-                      return '과목을 선택해주세요';
+                  onValueAdded: (value) {
+                    dropdownProvider.addCustomSubject(value);
+                    setState(() {
+                      _subject = value;
+                    });
+                  },
+                  onItemDeleted: (value) {
+                    dropdownProvider.removeSubject(value);
+                    if (_subject == value) {
+                      setState(() => _subject = null);
                     }
-                    return null;
                   },
                 ),
                 const SizedBox(height: 16),
@@ -247,54 +235,36 @@ class _ExpenseInputDialogState extends State<ExpenseInputDialog> {
                       _instructor = value;
                     });
                   },
+                  onItemDeleted: (value) {
+                    dropdownProvider.removeInstructorName(value);
+                    if (_instructor == value) {
+                      setState(() => _instructor = null);
+                    }
+                  },
                 ),
                 const SizedBox(height: 16),
 
                 // 6. 세부내역
-                DropdownButtonFormField<String>(
+                CustomDropdownField(
+                  label: '세부내역',
                   value: _detail,
-                  decoration: const InputDecoration(
-                    labelText: '세부내역 *',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: [
-                    ..._ensureValueInList(_detail, dropdownProvider.allDetails)
-                        .where((d) => d != etcOption)
-                        .map((detail) {
-                      return DropdownMenuItem<String>(
-                        value: detail,
-                        child: Text(detail),
-                      );
-                    }),
-                    const DropdownMenuItem<String>(
-                      value: etcOption,
-                      child: Text(etcOption),
-                    ),
-                    const DropdownMenuItem<String>(
-                      value: addNewOption,
-                      child: Text(
-                        addNewOption,
-                        style: TextStyle(
-                          color: Colors.blue,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
+                  options: dropdownProvider.allDetails,
                   onChanged: (value) {
-                    if (value == addNewOption) {
-                      _showAddCustomDetailDialog(context, dropdownProvider);
-                    } else {
-                      setState(() {
-                        _detail = value;
-                      });
-                    }
+                    setState(() {
+                      _detail = value;
+                    });
                   },
-                  validator: (value) {
-                    if (value == null || value.isEmpty || value == addNewOption) {
-                      return '세부내역을 선택해주세요';
+                  onValueAdded: (value) {
+                    dropdownProvider.addCustomDetail(value);
+                    setState(() {
+                      _detail = value;
+                    });
+                  },
+                  onItemDeleted: (value) {
+                    dropdownProvider.removeDetail(value);
+                    if (_detail == value) {
+                      setState(() => _detail = null);
                     }
-                    return null;
                   },
                 ),
                 const SizedBox(height: 16),
@@ -342,46 +312,28 @@ class _ExpenseInputDialogState extends State<ExpenseInputDialog> {
                 const SizedBox(height: 16),
 
                 // 8. 결제방법
-                DropdownButtonFormField<String>(
+                CustomDropdownField(
+                  label: '결제방법',
                   value: _paymentMethod,
-                  decoration: const InputDecoration(
-                    labelText: '결제방법 *',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: [
-                    ..._ensureValueInList(_paymentMethod, dropdownProvider.allPaymentMethods)
-                        .where((m) => m != etcOption)
-                        .map((method) {
-                      return DropdownMenuItem<String>(
-                        value: method,
-                        child: Text(method),
-                      );
-                    }),
-                    const DropdownMenuItem<String>(
-                      value: etcOption,
-                      child: Text(etcOption),
-                    ),
-                    const DropdownMenuItem<String>(
-                      value: addNewOption,
-                      child: Text(
-                        addNewOption,
-                        style: TextStyle(
-                          color: Colors.blue,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
+                  options: dropdownProvider.allPaymentMethods,
                   onChanged: (value) {
-                    if (value == addNewOption) {
-                      _showAddCustomPaymentMethodDialog(context, dropdownProvider);
-                    } else {
-                      setState(() {
-                        _paymentMethod = value!;
-                        if (_paymentMethod != '카드') {
-                          _cardName = null;
-                        }
-                      });
+                    setState(() {
+                      _paymentMethod = value!;
+                      if (_paymentMethod != '카드') {
+                        _cardName = null;
+                      }
+                    });
+                  },
+                  onValueAdded: (value) {
+                    dropdownProvider.addCustomPaymentMethod(value);
+                    setState(() {
+                      _paymentMethod = value;
+                    });
+                  },
+                  onItemDeleted: (value) {
+                    dropdownProvider.removePaymentMethod(value);
+                    if (_paymentMethod == value) {
+                      setState(() => _paymentMethod = paymentMethods[0]);
                     }
                   },
                 ),
@@ -389,43 +341,26 @@ class _ExpenseInputDialogState extends State<ExpenseInputDialog> {
 
                 // 8-1. 카드명 (조건부)
                 if (_paymentMethod == '카드') ...[
-                  DropdownButtonFormField<String>(
+                  CustomDropdownField(
+                    label: '카드명',
                     value: _cardName,
-                    decoration: const InputDecoration(
-                      labelText: '카드명',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: [
-                      ..._ensureValueInList(_cardName, dropdownProvider.cardNames)
-                          .where((n) => n != etcOption)
-                          .map((name) {
-                        return DropdownMenuItem<String>(
-                          value: name,
-                          child: Text(name),
-                        );
-                      }),
-                      const DropdownMenuItem<String>(
-                        value: etcOption,
-                        child: Text(etcOption),
-                      ),
-                      const DropdownMenuItem<String>(
-                        value: addNewOption,
-                        child: Text(
-                          addNewOption,
-                          style: TextStyle(
-                            color: Colors.blue,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
+                    options: dropdownProvider.cardNames,
+                    required: true,
                     onChanged: (value) {
-                      if (value == addNewOption) {
-                        _showAddCardNameDialog(context, dropdownProvider);
-                      } else {
-                        setState(() {
-                          _cardName = value;
-                        });
+                      setState(() {
+                        _cardName = value;
+                      });
+                    },
+                    onValueAdded: (value) {
+                      dropdownProvider.addCardName(value);
+                      setState(() {
+                        _cardName = value;
+                      });
+                    },
+                    onItemDeleted: (value) {
+                      dropdownProvider.removeCardName(value);
+                      if (_cardName == value) {
+                        setState(() => _cardName = null);
                       }
                     },
                   ),
@@ -532,13 +467,6 @@ class _ExpenseInputDialogState extends State<ExpenseInputDialog> {
     );
   }
 
-  /// Ensures the given value is present in the list.
-  /// If not, inserts it at the beginning so DropdownButtonFormField won't assert.
-  List<String> _ensureValueInList(String? value, List<String> list) {
-    if (value == null || value.isEmpty || list.contains(value)) return list;
-    return [value, ...list];
-  }
-
   Future<void> _selectDate(BuildContext context) async {
     final picked = await showDatePicker(
       context: context,
@@ -552,206 +480,6 @@ class _ExpenseInputDialogState extends State<ExpenseInputDialog> {
         _paymentDate = picked;
       });
     }
-  }
-
-  void _showAddCustomSubjectDialog(
-    BuildContext context,
-    DropdownProvider provider,
-  ) {
-    final controller = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('새 과목 추가'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: '과목',
-            border: OutlineInputBorder(),
-          ),
-          autofocus: true,
-          onSubmitted: (value) {
-            if (value.trim().isNotEmpty) {
-              provider.addCustomSubject(value.trim());
-              setState(() {
-                _subject = value.trim();
-              });
-              Navigator.of(context).pop();
-            }
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('취소'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final newValue = controller.text.trim();
-              if (newValue.isNotEmpty) {
-                provider.addCustomSubject(newValue);
-                setState(() {
-                  _subject = newValue;
-                });
-                Navigator.of(context).pop();
-              }
-            },
-            child: const Text('추가'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAddCustomDetailDialog(
-    BuildContext context,
-    DropdownProvider provider,
-  ) {
-    final controller = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('새 세부내역 추가'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: '세부내역',
-            border: OutlineInputBorder(),
-          ),
-          autofocus: true,
-          onSubmitted: (value) {
-            if (value.trim().isNotEmpty) {
-              provider.addCustomDetail(value.trim());
-              setState(() {
-                _detail = value.trim();
-              });
-              Navigator.of(context).pop();
-            }
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('취소'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final newValue = controller.text.trim();
-              if (newValue.isNotEmpty) {
-                provider.addCustomDetail(newValue);
-                setState(() {
-                  _detail = newValue;
-                });
-                Navigator.of(context).pop();
-              }
-            },
-            child: const Text('추가'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAddCustomPaymentMethodDialog(
-    BuildContext context,
-    DropdownProvider provider,
-  ) {
-    final controller = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('새 결제방법 추가'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: '결제방법',
-            border: OutlineInputBorder(),
-          ),
-          autofocus: true,
-          onSubmitted: (value) {
-            if (value.trim().isNotEmpty) {
-              provider.addCustomPaymentMethod(value.trim());
-              setState(() {
-                _paymentMethod = value.trim();
-              });
-              Navigator.of(context).pop();
-            }
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('취소'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final newValue = controller.text.trim();
-              if (newValue.isNotEmpty) {
-                provider.addCustomPaymentMethod(newValue);
-                setState(() {
-                  _paymentMethod = newValue;
-                });
-                Navigator.of(context).pop();
-              }
-            },
-            child: const Text('추가'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAddCardNameDialog(
-    BuildContext context,
-    DropdownProvider provider,
-  ) {
-    final controller = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('새 카드명 추가'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: '카드명',
-            border: OutlineInputBorder(),
-          ),
-          autofocus: true,
-          onSubmitted: (value) {
-            if (value.trim().isNotEmpty) {
-              provider.addCardName(value.trim());
-              setState(() {
-                _cardName = value.trim();
-              });
-              Navigator.of(context).pop();
-            }
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('취소'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final newValue = controller.text.trim();
-              if (newValue.isNotEmpty) {
-                provider.addCardName(newValue);
-                setState(() {
-                  _cardName = newValue;
-                });
-                Navigator.of(context).pop();
-              }
-            },
-            child: const Text('추가'),
-          ),
-        ],
-      ),
-    );
   }
 
   Future<void> _saveExpense() async {

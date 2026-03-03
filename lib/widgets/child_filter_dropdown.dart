@@ -1,14 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:k_academy__app/providers/child_filter_provider.dart';
+import 'package:k_academy__app/providers/dropdown_provider.dart';
 import 'package:k_academy__app/providers/expense_provider.dart';
 import 'package:k_academy__app/providers/schedule_provider.dart';
-
-// Wrapper to distinguish "전체 자녀 선택" (value=null) from "메뉴 닫기" (returns null)
-class _Opt {
-  final String? child;
-  const _Opt(this.child);
-}
 
 class ChildFilterDropdown extends StatefulWidget {
   const ChildFilterDropdown({super.key});
@@ -20,56 +15,32 @@ class ChildFilterDropdown extends StatefulWidget {
 class _ChildFilterDropdownState extends State<ChildFilterDropdown> {
   final _pillKey = GlobalKey();
 
-  Future<void> _openMenu({
+  void _openDialog({
     required BuildContext context,
     required List<String> children,
     required ChildFilterProvider filterProvider,
+    required DropdownProvider dropdownProvider,
     required String? effective,
-  }) async {
-    final box = _pillKey.currentContext?.findRenderObject() as RenderBox?;
-    if (box == null) return;
-    final overlay =
-        Overlay.of(context).context.findRenderObject() as RenderBox;
-
-    final pos = box.localToGlobal(Offset.zero);
-    final size = box.size;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final top = pos.dy + size.height + 4;
-    // left==right이면 Flutter가 x = left - menuWidth/2 로 계산 → 화면 정중앙 기준 가운데 정렬
-    final half = screenWidth / 2;
-
-    final result = await showMenu<_Opt>(
+  }) {
+    showDialog(
       context: context,
-      position: RelativeRect.fromLTRB(half, top, half, 0),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      elevation: 8,
-      color: Colors.white,
-      items: [
-        ...children.map(
-          (name) => PopupMenuItem<_Opt>(
-            value: _Opt(name),
-            height: 44,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: _MenuItem(label: name, isSelected: effective == name),
-          ),
-        ),
-        const PopupMenuDivider(height: 1),
-        PopupMenuItem<_Opt>(
-          value: const _Opt(null),
-          height: 44,
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: _MenuItem(label: '전체 자녀', isSelected: effective == null),
-        ),
-      ],
+      builder: (ctx) => _ChildReorderDialog(
+        children: children,
+        effective: effective,
+        onSelected: (child) {
+          filterProvider.select(child);
+        },
+        onReorder: (oldIndex, newIndex) {
+          dropdownProvider.reorderChildNames(oldIndex, newIndex);
+        },
+      ),
     );
-
-    if (result != null) {
-      filterProvider.select(result.child);
-    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final dropdownProvider = context.watch<DropdownProvider>();
+
     final expenseChildren = context
         .watch<ExpenseProvider>()
         .getAllExpenses()
@@ -84,10 +55,19 @@ class _ChildFilterDropdownState extends State<ChildFilterDropdown> {
         .where((n) => n.isNotEmpty)
         .toSet();
 
-    final children = ({...expenseChildren, ...scheduleChildren}).toList()
-      ..sort();
+    final allChildren = {...expenseChildren, ...scheduleChildren}.toList();
 
-    if (children.isEmpty) return const SizedBox();
+    if (allChildren.isEmpty) return const SizedBox();
+
+    // DropdownProvider 순서 동기화 후 정렬된 목록 사용
+    dropdownProvider.syncChildNameOrder(allChildren);
+    final children = dropdownProvider.childNames
+        .where((n) => allChildren.contains(n))
+        .toList();
+    // allChildren에는 있지만 childNames에 없는 항목 추가
+    for (final name in allChildren) {
+      if (!children.contains(name)) children.add(name);
+    }
 
     if (children.length == 1) {
       return _Pill(label: children.first, showChevron: false);
@@ -100,10 +80,11 @@ class _ChildFilterDropdownState extends State<ChildFilterDropdown> {
     final displayName = effective ?? '전체 자녀';
 
     return GestureDetector(
-      onTap: () => _openMenu(
+      onTap: () => _openDialog(
         context: context,
         children: children,
         filterProvider: filterProvider,
+        dropdownProvider: dropdownProvider,
         effective: effective,
       ),
       child: _Pill(key: _pillKey, label: displayName, showChevron: true),
@@ -111,30 +92,142 @@ class _ChildFilterDropdownState extends State<ChildFilterDropdown> {
   }
 }
 
-class _MenuItem extends StatelessWidget {
-  final String label;
-  final bool isSelected;
+class _ChildReorderDialog extends StatefulWidget {
+  final List<String> children;
+  final String? effective;
+  final ValueChanged<String?> onSelected;
+  final void Function(int oldIndex, int newIndex) onReorder;
 
-  const _MenuItem({required this.label, required this.isSelected});
+  const _ChildReorderDialog({
+    required this.children,
+    required this.effective,
+    required this.onSelected,
+    required this.onReorder,
+  });
+
+  @override
+  State<_ChildReorderDialog> createState() => _ChildReorderDialogState();
+}
+
+class _ChildReorderDialogState extends State<_ChildReorderDialog> {
+  late List<String> _orderedChildren;
+
+  @override
+  void initState() {
+    super.initState();
+    _orderedChildren = List.from(widget.children);
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        if (isSelected)
-          const Icon(Icons.check, size: 16, color: Colors.blue)
-        else
-          const SizedBox(width: 16),
-        const SizedBox(width: 10),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-            color: isSelected ? Colors.blue : Colors.black87,
-          ),
+    return AlertDialog(
+      contentPadding: const EdgeInsets.symmetric(vertical: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      content: SizedBox(
+        width: 280,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.4,
+              ),
+              child: ReorderableListView.builder(
+                shrinkWrap: true,
+                buildDefaultDragHandles: false,
+                itemCount: _orderedChildren.length,
+                onReorder: (oldIndex, newIndex) {
+                  setState(() {
+                    if (oldIndex < newIndex) newIndex--;
+                    final item = _orderedChildren.removeAt(oldIndex);
+                    _orderedChildren.insert(newIndex, item);
+                  });
+                  widget.onReorder(oldIndex, newIndex);
+                },
+                itemBuilder: (context, index) {
+                  final name = _orderedChildren[index];
+                  final isSelected = widget.effective == name;
+                  return Material(
+                    key: ValueKey(name),
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        widget.onSelected(name);
+                        Navigator.of(context).pop();
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 12),
+                        child: Row(
+                          children: [
+                            if (isSelected)
+                              const Icon(Icons.check,
+                                  size: 16, color: Colors.blue)
+                            else
+                              const SizedBox(width: 16),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                name,
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: isSelected
+                                      ? FontWeight.w600
+                                      : FontWeight.normal,
+                                  color:
+                                      isSelected ? Colors.blue : Colors.black87,
+                                ),
+                              ),
+                            ),
+                            ReorderableDragStartListener(
+                              index: index,
+                              child: const Icon(Icons.drag_handle,
+                                  size: 20, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const Divider(height: 1),
+            // 전체 자녀
+            InkWell(
+              onTap: () {
+                widget.onSelected(null);
+                Navigator.of(context).pop();
+              },
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                child: Row(
+                  children: [
+                    if (widget.effective == null)
+                      const Icon(Icons.check, size: 16, color: Colors.blue)
+                    else
+                      const SizedBox(width: 16),
+                    const SizedBox(width: 10),
+                    Text(
+                      '전체 자녀',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: widget.effective == null
+                            ? FontWeight.w600
+                            : FontWeight.normal,
+                        color: widget.effective == null
+                            ? Colors.blue
+                            : Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

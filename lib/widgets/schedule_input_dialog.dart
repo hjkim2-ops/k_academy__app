@@ -6,6 +6,7 @@ import 'package:k_academy__app/models/schedule.dart';
 import 'package:k_academy__app/providers/dropdown_provider.dart';
 import 'package:k_academy__app/providers/schedule_provider.dart';
 import 'package:k_academy__app/utils/constants.dart';
+import 'package:k_academy__app/widgets/custom_dropdown_field.dart';
 
 class ScheduleInputDialog extends StatefulWidget {
   final Schedule? existingSchedule;
@@ -23,6 +24,7 @@ class _ScheduleInputDialogState extends State<ScheduleInputDialog> {
   String? _academyName;
   String? _subject;
   String? _instructor;
+  String _classType = classTypes[0]; // Default: 현강
   final Set<int> _selectedDays = {};
   TimeOfDay _startTime = const TimeOfDay(hour: 15, minute: 0);
   TimeOfDay _endTime = const TimeOfDay(hour: 17, minute: 0);
@@ -43,6 +45,7 @@ class _ScheduleInputDialogState extends State<ScheduleInputDialog> {
       _academyName = s.academyName;
       _subject = s.subject;
       _instructor = s.instructor.isEmpty ? null : s.instructor;
+      _classType = s.classType;
       _selectedDays.add(s.dayOfWeek);
       _startTime = s.startTime;
       _endTime = s.endTime;
@@ -290,6 +293,7 @@ class _ScheduleInputDialogState extends State<ScheduleInputDialog> {
         academyName: _academyName,
         subject: _subject,
         instructor: _instructor ?? '',
+        classType: _classType,
         dayOfWeek: _selectedDays.first,
         startHour: _startTime.hour,
         startMinute: _startTime.minute,
@@ -313,6 +317,7 @@ class _ScheduleInputDialogState extends State<ScheduleInputDialog> {
           academyName: _academyName ?? '',
           subject: _subject!,
           instructor: _instructor ?? '',
+          classType: _classType,
           dayOfWeek: day,
           startHour: _startTime.hour,
           startMinute: _startTime.minute,
@@ -326,49 +331,6 @@ class _ScheduleInputDialogState extends State<ScheduleInputDialog> {
       }
     }
     if (mounted) Navigator.of(context).pop();
-  }
-
-  void _showAddNewDialog({
-    required String label,
-    required ValueChanged<String> onAdded,
-  }) {
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('새 $label 추가'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(
-            labelText: label,
-            border: const OutlineInputBorder(),
-          ),
-          onSubmitted: (v) {
-            if (v.trim().isNotEmpty) {
-              onAdded(v.trim());
-              Navigator.of(ctx).pop();
-            }
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('취소'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final v = controller.text.trim();
-              if (v.isNotEmpty) {
-                onAdded(v);
-                Navigator.of(ctx).pop();
-              }
-            },
-            child: const Text('추가'),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
@@ -388,7 +350,7 @@ class _ScheduleInputDialogState extends State<ScheduleInputDialog> {
               child: Row(
                 children: [
                   Text(
-                    _isEditing ? '시간표 수정' : '시간표 추가',
+                    _isEditing ? '시간표 수정' : '시간표 입력',
                     style: const TextStyle(
                         fontSize: 18, fontWeight: FontWeight.bold),
                   ),
@@ -411,72 +373,122 @@ class _ScheduleInputDialogState extends State<ScheduleInputDialog> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // 자녀
-                      _buildDropdown(
-                        label: '자녀 *',
+                      CustomDropdownField(
+                        label: '자녀',
                         value: _childName,
-                        items: dropdownProvider.childNames,
+                        options: dropdownProvider.childNames,
                         onChanged: (v) => setState(() => _childName = v),
-                        hint: '자녀를 선택하세요',
-                        validator: (v) => v == null ? '자녀를 선택해주세요' : null,
-                        onAddNew: () => _showAddNewDialog(
-                          label: '자녀',
-                          onAdded: (v) {
-                            dropdownProvider.addChildName(v);
-                            setState(() => _childName = v);
-                          },
-                        ),
+                        onValueAdded: (v) {
+                          dropdownProvider.addChildName(v);
+                          setState(() => _childName = v);
+                        },
+                        onItemDeleted: (v) {
+                          dropdownProvider.removeChildName(v);
+                          if (_childName == v) {
+                            setState(() => _childName = null);
+                          }
+                        },
                       ),
                       const SizedBox(height: 14),
 
                       // 학원명
-                      _buildDropdown(
+                      CustomDropdownField(
                         label: '학원/상호명',
                         value: _academyName,
-                        items: dropdownProvider.businessNames,
+                        options: dropdownProvider.businessNames,
+                        required: true,
                         onChanged: (v) => setState(() => _academyName = v),
-                        hint: '학원 이름 선택',
-                        onAddNew: () => _showAddNewDialog(
-                          label: '학원/상호명',
-                          onAdded: (v) {
-                            dropdownProvider.addBusinessName(v);
-                            setState(() => _academyName = v);
-                          },
-                        ),
+                        onValueAdded: (v) {
+                          dropdownProvider.addBusinessName(v);
+                          setState(() => _academyName = v);
+                        },
+                        onItemDeleted: (v) {
+                          dropdownProvider.removeBusinessName(v);
+                          if (_academyName == v) {
+                            setState(() => _academyName = null);
+                          }
+                        },
                       ),
                       const SizedBox(height: 14),
 
                       // 과목
-                      _buildDropdown(
-                        label: '과목 *',
+                      CustomDropdownField(
+                        label: '과목',
                         value: _subject,
-                        items: dropdownProvider.allSubjects,
+                        options: dropdownProvider.allSubjects,
                         onChanged: (v) => setState(() => _subject = v),
-                        hint: '과목 선택',
-                        validator: (v) => v == null ? '과목을 선택해주세요' : null,
-                        onAddNew: () => _showAddNewDialog(
-                          label: '과목',
-                          onAdded: (v) {
-                            dropdownProvider.addCustomSubject(v);
-                            setState(() => _subject = v);
-                          },
-                        ),
+                        onValueAdded: (v) {
+                          dropdownProvider.addCustomSubject(v);
+                          setState(() => _subject = v);
+                        },
+                        onItemDeleted: (v) {
+                          dropdownProvider.removeSubject(v);
+                          if (_subject == v) {
+                            setState(() => _subject = null);
+                          }
+                        },
                       ),
                       const SizedBox(height: 14),
 
                       // 강사
-                      _buildDropdown(
+                      CustomDropdownField(
                         label: '강사',
                         value: _instructor,
-                        items: dropdownProvider.instructorNames,
+                        options: dropdownProvider.instructorNames,
+                        required: false,
                         onChanged: (v) => setState(() => _instructor = v),
-                        hint: '강사 선택 (선택사항)',
-                        onAddNew: () => _showAddNewDialog(
-                          label: '강사',
-                          onAdded: (v) {
-                            dropdownProvider.addInstructorName(v);
-                            setState(() => _instructor = v);
-                          },
-                        ),
+                        onValueAdded: (v) {
+                          dropdownProvider.addInstructorName(v);
+                          setState(() => _instructor = v);
+                        },
+                        onItemDeleted: (v) {
+                          dropdownProvider.removeInstructorName(v);
+                          if (_instructor == v) {
+                            setState(() => _instructor = null);
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 14),
+
+                      // 수업 형태
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            '수업 형태 *',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.black54,
+                            ),
+                          ),
+                          Row(
+                            children: classTypes.map((type) {
+                              return Expanded(
+                                child: InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      _classType = type;
+                                    });
+                                  },
+                                  child: Row(
+                                    children: [
+                                      Radio<String>(
+                                        value: type,
+                                        groupValue: _classType,
+                                        onChanged: (value) {
+                                          setState(() {
+                                            _classType = value!;
+                                          });
+                                        },
+                                      ),
+                                      Text(type),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 16),
 
@@ -658,59 +670,6 @@ class _ScheduleInputDialogState extends State<ScheduleInputDialog> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildDropdown({
-    required String label,
-    required String? value,
-    required List<String> items,
-    required ValueChanged<String?> onChanged,
-    required String hint,
-    String? Function(String?)? validator,
-    VoidCallback? onAddNew,
-  }) {
-    final unique = items.toSet().where((e) => e != etcOption).toList();
-    final allItems = [...unique, etcOption, addNewOption];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label,
-            style: const TextStyle(
-                fontSize: 13, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 6),
-        DropdownButtonFormField<String>(
-          value: unique.contains(value) ? value : null,
-          items: allItems.map((e) => DropdownMenuItem(
-            value: e,
-            child: Text(
-              e,
-              style: e == addNewOption
-                  ? const TextStyle(
-                      color: Colors.blue, fontWeight: FontWeight.bold)
-                  : null,
-            ),
-          )).toList(),
-          onChanged: (v) {
-            if (v == addNewOption) {
-              onAddNew?.call();
-            } else {
-              onChanged(v);
-            }
-          },
-          validator: validator != null
-              ? (v) => (v == null || v == addNewOption) ? validator(null) : validator(v)
-              : null,
-          decoration: InputDecoration(
-            hintText: hint,
-            border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8)),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            isDense: true,
-          ),
-        ),
-      ],
     );
   }
 

@@ -19,6 +19,10 @@ class StorageService {
     await Hive.openBox<String>(customDetailsBoxName);
     await Hive.openBox<String>(cardNamesBoxName);
     await Hive.openBox<String>(customPaymentMethodsBoxName);
+    await Hive.openBox<String>(hiddenSubjectsBoxName);
+    await Hive.openBox<String>(hiddenDetailsBoxName);
+    await Hive.openBox<String>(hiddenPaymentMethodsBoxName);
+    await Hive.openBox<String>(childNameOrderBoxName);
   }
 
   static Box<Expense> get expenseBox => Hive.box<Expense>(expenseBoxName);
@@ -30,4 +34,8 @@ class StorageService {
   static Box<String> get customDetailsBox => Hive.box<String>(customDetailsBoxName);
   static Box<String> get cardNamesBox => Hive.box<String>(cardNamesBoxName);
   static Box<String> get customPaymentMethodsBox => Hive.box<String>(customPaymentMethodsBoxName);
+  static Box<String> get hiddenSubjectsBox => Hive.box<String>(hiddenSubjectsBoxName);
+  static Box<String> get hiddenDetailsBox => Hive.box<String>(hiddenDetailsBoxName);
+  static Box<String> get hiddenPaymentMethodsBox => Hive.box<String>(hiddenPaymentMethodsBoxName);
+  static Box<String> get childNameOrderBox => Hive.box<String>(childNameOrderBoxName);
 }

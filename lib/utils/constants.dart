@@ -48,6 +48,12 @@ const String customPaymentMethodsBoxName = 'customPaymentMethods';
 // Schedule box name
 const String scheduleBoxName = 'schedules';
 
+// Hidden/order box names
+const String hiddenSubjectsBoxName = 'hiddenSubjects';
+const String hiddenDetailsBoxName = 'hiddenDetails';
+const String hiddenPaymentMethodsBoxName = 'hiddenPaymentMethods';
+const String childNameOrderBoxName = 'childNameOrder';
+
 // 시간표 색상 팔레트
 const List<int> scheduleColorValues = [
   0xFF2196F3, // Blue

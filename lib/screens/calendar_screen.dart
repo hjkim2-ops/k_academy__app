@@ -166,9 +166,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         _selectedDay = null;
                       });
                     },
-                    headerStyle: const HeaderStyle(
+                    headerStyle: HeaderStyle(
                       formatButtonVisible: false,
                       titleCentered: true,
+                      titleTextFormatter: (date, locale) =>
+                          '${date.year}년 ${date.month}월',
                     ),
                     calendarStyle: CalendarStyle(
                       markersMaxCount: 3,

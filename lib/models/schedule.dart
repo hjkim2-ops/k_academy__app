@@ -47,6 +47,9 @@ class Schedule extends HiveObject {
   @HiveField(13)
   final List<String> cancelledDates; // format: "yyyy-MM-dd"
 
+  @HiveField(14)
+  final String classType; // 현강 / 라이브
+
   Schedule({
     required this.id,
     required this.childName,
@@ -62,6 +65,7 @@ class Schedule extends HiveObject {
     required this.isActive,
     this.memo,
     this.cancelledDates = const [],
+    this.classType = '현강',
   });
 
   TimeOfDay get startTime => TimeOfDay(hour: startHour, minute: startMinute);
@@ -100,6 +104,7 @@ class Schedule extends HiveObject {
         'isActive': isActive,
         'memo': memo,
         'cancelledDates': cancelledDates,
+        'classType': classType,
       };
 
   factory Schedule.fromMap(String id, Map<String, dynamic> map) => Schedule(
@@ -117,6 +122,7 @@ class Schedule extends HiveObject {
         isActive: map['isActive'] ?? true,
         memo: map['memo'],
         cancelledDates: List<String>.from(map['cancelledDates'] ?? []),
+        classType: map['classType'] ?? '현강',
       );
 
   Schedule copyWith({
@@ -133,6 +139,7 @@ class Schedule extends HiveObject {
     bool? isActive,
     String? memo,
     List<String>? cancelledDates,
+    String? classType,
   }) =>
       Schedule(
         id: id,
@@ -149,5 +156,6 @@ class Schedule extends HiveObject {
         isActive: isActive ?? this.isActive,
         memo: memo ?? this.memo,
         cancelledDates: cancelledDates ?? this.cancelledDates,
+        classType: classType ?? this.classType,
       );
 }

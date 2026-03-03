@@ -139,9 +139,75 @@ class _ScheduleScreenState extends State<ScheduleScreen>
     );
   }
 
+  // ────────────────── 겹침 레이아웃 계산 ──────────────────
+  /// 같은 요일에서 시간이 겹치는 블록을 찾아 column/totalColumns를 할당
+  List<_OverlapInfo> _computeOverlapLayout(List<Schedule> schedules) {
+    final result = <_OverlapInfo>[];
+
+    for (int day = 1; day <= 7; day++) {
+      final dayList = schedules.where((s) => s.dayOfWeek == day).toList();
+      if (dayList.isEmpty) continue;
+
+      // 시작 시간순 정렬
+      dayList.sort((a, b) {
+        final cmp = (a.startHour * 60 + a.startMinute)
+            .compareTo(b.startHour * 60 + b.startMinute);
+        if (cmp != 0) return cmp;
+        return b.durationMinutes.compareTo(a.durationMinutes);
+      });
+
+      // 겹치는 클러스터 묶기
+      final clusters = <List<Schedule>>[];
+      for (final s in dayList) {
+        final sStart = s.startHour * 60 + s.startMinute;
+        if (clusters.isNotEmpty) {
+          final last = clusters.last;
+          final clusterEnd = last
+              .map((e) => e.endHour * 60 + e.endMinute)
+              .reduce(max);
+          if (sStart < clusterEnd) {
+            last.add(s);
+            continue;
+          }
+        }
+        clusters.add([s]);
+      }
+
+      // 클러스터별 column 할당
+      for (final cluster in clusters) {
+        final columns = <List<Schedule>>[];
+        for (final s in cluster) {
+          final sStart = s.startHour * 60 + s.startMinute;
+          int? col;
+          for (int c = 0; c < columns.length; c++) {
+            final lastEnd = columns[c].last.endHour * 60 +
+                columns[c].last.endMinute;
+            if (sStart >= lastEnd) {
+              col = c;
+              break;
+            }
+          }
+          if (col != null) {
+            columns[col].add(s);
+          } else {
+            columns.add([s]);
+          }
+        }
+        final total = columns.length;
+        for (int c = 0; c < columns.length; c++) {
+          for (final s in columns[c]) {
+            result.add(_OverlapInfo(s, c, total));
+          }
+        }
+      }
+    }
+    return result;
+  }
+
   // ────────────────── 공통 그리드 렌더링 ──────────────────
   Widget _buildGrid(List<Schedule> schedules) {
     final totalHeight = (_endHour - _startHour) * _pixelsPerHour;
+    final layoutInfos = _computeOverlapLayout(schedules);
 
     return Expanded(
       child: SingleChildScrollView(
@@ -194,19 +260,24 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                                   child: VerticalDivider(
                                       width: 0, color: Colors.grey[200]),
                                 )),
-                        // 시간표 블록
-                        ...schedules.map((s) {
+                        // 시간표 블록 (겹침 레이아웃 적용)
+                        ...layoutInfos.map((info) {
+                          final s = info.schedule;
                           final top = (s.startHour - _startHour) *
                                   _pixelsPerHour +
                               s.startMinute * _pixelsPerHour / 60;
                           final height = max(
                               s.durationMinutes * _pixelsPerHour / 60,
                               18.0);
-                          final left = (s.dayOfWeek - 1) * colWidth + 1;
+                          final dayLeft = (s.dayOfWeek - 1) * colWidth;
+                          final slotWidth =
+                              (colWidth - 2) / info.totalColumns;
+                          final left =
+                              dayLeft + 1 + info.column * slotWidth;
                           return Positioned(
                             top: top,
                             left: left,
-                            width: colWidth - 2,
+                            width: slotWidth,
                             height: height,
                             child: _ScheduleBlock(
                               schedule: s,
@@ -463,9 +534,13 @@ class _ScheduleScreenState extends State<ScheduleScreen>
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
-        title: Text('${schedule.subject} · ${schedule.dayName}요일'),
-        content: Text(schedule.timeRange),
+        title: Text('${schedule.subject} · ${schedule.childName}'),
+        content: Text('${schedule.dayName}요일  ${schedule.timeRange}'),
         actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(),
+            child: const Text('취소'),
+          ),
           TextButton(
             onPressed: () {
               Navigator.of(dialogCtx).pop();
@@ -499,6 +574,13 @@ class _ScheduleScreenState extends State<ScheduleScreen>
 
 // ────────────────── 서브 위젯 ──────────────────
 
+class _OverlapInfo {
+  final Schedule schedule;
+  final int column;
+  final int totalColumns;
+  const _OverlapInfo(this.schedule, this.column, this.totalColumns);
+}
+
 class _ScheduleBlock extends StatelessWidget {
   final Schedule schedule;
   final double blockHeight;
@@ -523,6 +605,13 @@ class _ScheduleBlock extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (schedule.academyName.isNotEmpty && blockHeight >= 28)
+              Text(
+                schedule.academyName,
+                style: const TextStyle(color: Colors.white70, fontSize: 7),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             Text(
               schedule.subject,
               style: const TextStyle(
@@ -538,6 +627,12 @@ class _ScheduleBlock extends StatelessWidget {
                 style: const TextStyle(color: Colors.white70, fontSize: 8),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+              ),
+            if (schedule.classType == '라이브' && blockHeight >= 48)
+              Text(
+                '라이브',
+                style: const TextStyle(color: Colors.white70, fontSize: 7),
+                maxLines: 1,
               ),
           ],
         ),

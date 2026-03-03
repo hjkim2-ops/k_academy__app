@@ -18,14 +18,53 @@ class DropdownProvider with ChangeNotifier {
   List<String> _cardNames = [];
   List<String> _customPaymentMethods = [];
 
-  List<String> get childNames => _childNames.toSet().toList();
+  List<String> _hiddenSubjects = [];
+  List<String> _hiddenDetails = [];
+  List<String> _hiddenPaymentMethods = [];
+  List<String> _childNameOrder = [];
+
+  List<String> get childNames {
+    final names = _childNames.toSet().toList();
+    if (_childNameOrder.isNotEmpty) {
+      names.sort((a, b) {
+        final ia = _childNameOrder.indexOf(a);
+        final ib = _childNameOrder.indexOf(b);
+        if (ia == -1 && ib == -1) return a.compareTo(b);
+        if (ia == -1) return 1;
+        if (ib == -1) return 1;
+        return ia.compareTo(ib);
+      });
+    }
+    return names;
+  }
+
   List<String> get businessNames => _businessNames.toSet().toList();
   List<String> get instructorNames => _instructorNames.toSet().toList();
   List<String> get cardNames => _cardNames.toSet().toList();
 
-  List<String> get allSubjects => [...defaultSubjects, ..._customSubjects].toSet().toList();
-  List<String> get allDetails => [...defaultDetails, ..._customDetails].toSet().toList();
-  List<String> get allPaymentMethods => [...paymentMethods, ..._customPaymentMethods].toSet().toList();
+  List<String> get allSubjects {
+    final hidden = _hiddenSubjects.toSet();
+    return [...defaultSubjects, ..._customSubjects]
+        .toSet()
+        .where((s) => !hidden.contains(s))
+        .toList();
+  }
+
+  List<String> get allDetails {
+    final hidden = _hiddenDetails.toSet();
+    return [...defaultDetails, ..._customDetails]
+        .toSet()
+        .where((d) => !hidden.contains(d))
+        .toList();
+  }
+
+  List<String> get allPaymentMethods {
+    final hidden = _hiddenPaymentMethods.toSet();
+    return [...paymentMethods, ..._customPaymentMethods]
+        .toSet()
+        .where((m) => !hidden.contains(m))
+        .toList();
+  }
 
   /// 인증 모드 변경 시 호출됨 (main.dart ProxyProvider에서 자동 호출)
   void onAuthChanged(bool isTrialMode, String? userId) {
@@ -51,6 +90,10 @@ class DropdownProvider with ChangeNotifier {
     _customDetails = _historyService.getCustomDetails();
     _cardNames = _historyService.getCardNames();
     _customPaymentMethods = _historyService.getCustomPaymentMethods();
+    _hiddenSubjects = _historyService.getHiddenSubjects();
+    _hiddenDetails = _historyService.getHiddenDetails();
+    _hiddenPaymentMethods = _historyService.getHiddenPaymentMethods();
+    _childNameOrder = _historyService.getChildNameOrder();
 
     // 2. 로그인 상태면 클라우드에서 로드 후 병합
     if (_firestoreService != null) {
@@ -76,6 +119,14 @@ class DropdownProvider with ChangeNotifier {
     _customDetails = {..._customDetails, ...cloudData['customDetails'] ?? []}.toList();
     _cardNames = {..._cardNames, ...cloudData['cardNames'] ?? []}.toList();
     _customPaymentMethods = {..._customPaymentMethods, ...cloudData['customPaymentMethods'] ?? []}.toList();
+    _hiddenSubjects = {..._hiddenSubjects, ...cloudData['hiddenSubjects'] ?? []}.toList();
+    _hiddenDetails = {..._hiddenDetails, ...cloudData['hiddenDetails'] ?? []}.toList();
+    _hiddenPaymentMethods = {..._hiddenPaymentMethods, ...cloudData['hiddenPaymentMethods'] ?? []}.toList();
+    // childNameOrder: cloud wins if local is empty
+    final cloudOrder = cloudData['childNameOrder'] ?? [];
+    if (_childNameOrder.isEmpty && cloudOrder.isNotEmpty) {
+      _childNameOrder = cloudOrder;
+    }
   }
 
   /// 병합된 데이터를 로컬(Hive)에 저장
@@ -101,6 +152,18 @@ class DropdownProvider with ChangeNotifier {
     for (final method in _customPaymentMethods) {
       await _historyService.addCustomPaymentMethod(method);
     }
+    for (final s in _hiddenSubjects) {
+      await _historyService.addHiddenSubject(s);
+    }
+    for (final d in _hiddenDetails) {
+      await _historyService.addHiddenDetail(d);
+    }
+    for (final m in _hiddenPaymentMethods) {
+      await _historyService.addHiddenPaymentMethod(m);
+    }
+    if (_childNameOrder.isNotEmpty) {
+      await _historyService.saveChildNameOrder(_childNameOrder);
+    }
   }
 
   /// 병합된 데이터를 클라우드(Firestore)에 저장
@@ -114,6 +177,10 @@ class DropdownProvider with ChangeNotifier {
       customDetails: _customDetails,
       cardNames: _cardNames,
       customPaymentMethods: _customPaymentMethods,
+      hiddenSubjects: _hiddenSubjects,
+      hiddenDetails: _hiddenDetails,
+      hiddenPaymentMethods: _hiddenPaymentMethods,
+      childNameOrder: _childNameOrder,
     );
   }
 
@@ -185,5 +252,104 @@ class DropdownProvider with ChangeNotifier {
     _customPaymentMethods = _historyService.getCustomPaymentMethods();
     await _syncToCloud();
     notifyListeners();
+  }
+
+  // --- 항목 삭제 ---
+
+  Future<void> removeChildName(String name) async {
+    await _historyService.removeChildName(name);
+    _childNames = _historyService.getChildNames();
+    _childNameOrder.remove(name);
+    await _historyService.saveChildNameOrder(_childNameOrder);
+    await _syncToCloud();
+    notifyListeners();
+  }
+
+  Future<void> removeBusinessName(String name) async {
+    await _historyService.removeBusinessName(name);
+    _businessNames = _historyService.getBusinessNames();
+    await _syncToCloud();
+    notifyListeners();
+  }
+
+  Future<void> removeInstructorName(String name) async {
+    await _historyService.removeInstructorName(name);
+    _instructorNames = _historyService.getInstructorNames();
+    await _syncToCloud();
+    notifyListeners();
+  }
+
+  Future<void> removeSubject(String subject) async {
+    if (defaultSubjects.contains(subject)) {
+      // 기본항목은 숨김 처리
+      _hiddenSubjects.add(subject);
+      await _historyService.addHiddenSubject(subject);
+    } else {
+      // 커스텀항목은 삭제
+      await _historyService.removeCustomSubject(subject);
+      _customSubjects = _historyService.getCustomSubjects();
+    }
+    await _syncToCloud();
+    notifyListeners();
+  }
+
+  Future<void> removeDetail(String detail) async {
+    if (defaultDetails.contains(detail)) {
+      _hiddenDetails.add(detail);
+      await _historyService.addHiddenDetail(detail);
+    } else {
+      await _historyService.removeCustomDetail(detail);
+      _customDetails = _historyService.getCustomDetails();
+    }
+    await _syncToCloud();
+    notifyListeners();
+  }
+
+  Future<void> removeCardName(String name) async {
+    await _historyService.removeCardName(name);
+    _cardNames = _historyService.getCardNames();
+    await _syncToCloud();
+    notifyListeners();
+  }
+
+  Future<void> removePaymentMethod(String method) async {
+    if (paymentMethods.contains(method)) {
+      _hiddenPaymentMethods.add(method);
+      await _historyService.addHiddenPaymentMethod(method);
+    } else {
+      await _historyService.removeCustomPaymentMethod(method);
+      _customPaymentMethods = _historyService.getCustomPaymentMethods();
+    }
+    await _syncToCloud();
+    notifyListeners();
+  }
+
+  // --- 자녀 순서 변경 ---
+
+  Future<void> reorderChildNames(int oldIndex, int newIndex) async {
+    final list = childNames; // already ordered
+    if (oldIndex < newIndex) newIndex--;
+    final item = list.removeAt(oldIndex);
+    list.insert(newIndex, item);
+    _childNameOrder = list;
+    await _historyService.saveChildNameOrder(_childNameOrder);
+    await _syncToCloud();
+    notifyListeners();
+  }
+
+  /// 현재 존재하는 자녀 목록과 순서를 동기화 (새 자녀 추가 시 순서에 반영)
+  void syncChildNameOrder(List<String> currentChildren) {
+    final ordered = <String>[];
+    for (final name in _childNameOrder) {
+      if (currentChildren.contains(name)) {
+        ordered.add(name);
+      }
+    }
+    for (final name in currentChildren) {
+      if (!ordered.contains(name)) {
+        ordered.add(name);
+      }
+    }
+    _childNameOrder = ordered;
   }
 }
