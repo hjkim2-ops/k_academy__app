@@ -66,8 +66,27 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         title: 'K-학원',
         theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFF7BA4D4),
+            surface: const Color(0xFFF5F7FA),
+          ),
+          scaffoldBackgroundColor: const Color(0xFFF5F7FA),
           useMaterial3: true,
+          textTheme: ThemeData.light().textTheme.apply(
+            bodyColor: const Color(0xFF4A4A4A),
+            displayColor: const Color(0xFF4A4A4A),
+          ),
+          cardTheme: CardThemeData(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            color: Colors.white,
+            shadowColor: Colors.black.withValues(alpha: 0.08),
+          ),
+          appBarTheme: const AppBarTheme(
+            foregroundColor: Color(0xFF4A4A4A),
+          ),
         ),
         localizationsDelegates: const [
           GlobalMaterialLocalizations.delegate,

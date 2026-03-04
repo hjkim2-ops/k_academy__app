@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:k_academy__app/models/expense.dart';
 import 'package:k_academy__app/providers/auth_provider.dart';
 import 'package:k_academy__app/providers/child_filter_provider.dart';
+import 'package:k_academy__app/providers/dropdown_provider.dart';
 import 'package:k_academy__app/providers/expense_provider.dart';
 import 'package:k_academy__app/screens/home_screen.dart';
 import 'package:k_academy__app/services/export_service.dart';
@@ -77,14 +78,26 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
       lastDate: DateTime(2100),
       initialDateRange: initial,
       locale: const Locale('ko'),
-      builder: (context, child) => Theme(
-        data: Theme.of(context).copyWith(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-          datePickerTheme: const DatePickerThemeData(
-            headerHeadlineStyle: TextStyle(fontSize: 16),
+      builder: (context, child) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 392),
+            child: Theme(
+              data: Theme.of(context).copyWith(
+                colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+                datePickerTheme: const DatePickerThemeData(
+                  headerHeadlineStyle: TextStyle(fontSize: 16),
+                  dayStyle: TextStyle(fontSize: 14),
+                  weekdayStyle: TextStyle(fontSize: 14),
+                  yearStyle: TextStyle(fontSize: 14),
+                ),
+              ),
+              child: child!,
+            ),
           ),
         ),
-        child: child!,
       ),
     );
     if (picked != null) {
@@ -114,10 +127,11 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final selectedChild = context.watch<ChildFilterProvider>().selectedChild;
+    final orderedNames = context.watch<DropdownProvider>().childNames;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('지출통계'),
+        title: const Text('지출 통계'),
         centerTitle: false,
         flexibleSpace: const Align(
           alignment: Alignment.topCenter,
@@ -161,7 +175,7 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
                   const SizedBox(height: 24),
                   _buildSubjectChart(filtered),
                   const SizedBox(height: 24),
-                  _buildChildChart(filtered),
+                  _buildChildChart(filtered, orderedNames),
                   const SizedBox(height: 24),
                   _buildExcelButton(filtered, selectedChild),
                   const SizedBox(height: 16),
@@ -176,58 +190,54 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
 
   Widget _buildPeriodSelector() {
     final isCustom = _period == '기간 설정';
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          ..._periods.map((p) {
-            final selected = p == _period;
-            return Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: ChoiceChip(
-                label: Text(p),
-                selected: selected,
-                onSelected: (_) => setState(() => _period = p),
-                selectedColor: Theme.of(context).primaryColor,
-                labelStyle: TextStyle(
-                  color: selected ? Colors.white : null,
-                  fontWeight:
-                      selected ? FontWeight.bold : FontWeight.normal,
-                ),
-              ),
-            );
-          }),
-          // 기간 설정 버튼
-          GestureDetector(
-            onTap: _pickCustomRange,
-            child: Chip(
-              label: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    _customRangeLabel(),
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: isCustom ? Colors.white : null,
-                      fontWeight:
-                          isCustom ? FontWeight.bold : FontWeight.normal,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(
-                    Icons.calendar_month_outlined,
-                    size: 14,
-                    color: isCustom ? Colors.white : Colors.grey[600],
-                  ),
-                ],
-              ),
-              backgroundColor: isCustom
-                  ? Theme.of(context).primaryColor
-                  : null,
+    return Wrap(
+      spacing: 8,
+      runSpacing: 6,
+      children: [
+        ..._periods.map((p) {
+          final selected = p == _period;
+          return ChoiceChip(
+            label: Text(p),
+            selected: selected,
+            onSelected: (_) => setState(() => _period = p),
+            selectedColor: Theme.of(context).primaryColor,
+            labelStyle: TextStyle(
+              color: selected ? Colors.white : null,
+              fontWeight:
+                  selected ? FontWeight.bold : FontWeight.normal,
             ),
+          );
+        }),
+        // 기간 설정 버튼
+        GestureDetector(
+          onTap: _pickCustomRange,
+          child: Chip(
+            label: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _customRangeLabel(),
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isCustom ? Colors.white : null,
+                    fontWeight:
+                        isCustom ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.calendar_month_outlined,
+                  size: 14,
+                  color: isCustom ? Colors.white : Colors.grey[600],
+                ),
+              ],
+            ),
+            backgroundColor: isCustom
+                ? Theme.of(context).primaryColor
+                : null,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -255,11 +265,11 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
 
     return Row(
       children: [
-        _SummaryCard(label: '총 지출', amount: total, color: Colors.blue),
+        _SummaryCard(label: '총 지출', amount: total, color: const Color(0xFF7BA4D4)),
         const SizedBox(width: 8),
-        _SummaryCard(label: '취소 금액', amount: cancel, color: Colors.red),
+        _SummaryCard(label: '취소 금액', amount: cancel, color: const Color(0xFF8DC6A0)),
         const SizedBox(width: 8),
-        _SummaryCard(label: '실 지출', amount: net, color: Colors.green),
+        _SummaryCard(label: '실 지출', amount: net, color: const Color(0xFFD48A8A)),
       ],
     );
   }
@@ -276,6 +286,7 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
     // 날짜순 정렬
     final sortedKeys = byMonth.keys.toList()..sort();
     final maxVal = byMonth.values.fold(0, max).toDouble();
+    final monthMaxY = (maxVal / 10000).ceilToDouble() * 1.2;
 
     return _ChartCard(
       title: '월별 지출',
@@ -283,7 +294,7 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
         height: 200,
         child: BarChart(
           BarChartData(
-            maxY: (maxVal / 10000).ceilToDouble() * 1.2,
+            maxY: monthMaxY,
             barTouchData: BarTouchData(
               touchTooltipData: BarTouchTooltipData(
                 getTooltipColor: (_) => Colors.black87,
@@ -317,10 +328,13 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
                 sideTitles: SideTitles(
                   showTitles: true,
                   reservedSize: 48,
-                  getTitlesWidget: (v, _) => Text(
-                    '${v.toInt()}만',
-                    style: const TextStyle(fontSize: 10),
-                  ),
+                  getTitlesWidget: (v, _) {
+                    if ((v - monthMaxY).abs() < 0.01) return const SizedBox();
+                    return Text(
+                      '${v.toInt()}만',
+                      style: const TextStyle(fontSize: 10),
+                    );
+                  },
                 ),
               ),
               topTitles:
@@ -332,8 +346,8 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
             borderData: FlBorderData(
               show: true,
               border: const Border(
-                left: BorderSide(color: Colors.black54),
-                bottom: BorderSide(color: Colors.black54),
+                left: BorderSide(color: Color(0xFFD0D5DD)),
+                bottom: BorderSide(color: Color(0xFFD0D5DD)),
                 top: BorderSide.none,
                 right: BorderSide.none,
               ),
@@ -344,7 +358,7 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
                 barRods: [
                   BarChartRodData(
                     toY: byMonth[e.value]!.toDouble() / 10000,
-                    color: Colors.indigo,
+                    color: const Color(0xFFA2CFFE),
                     width: 28,
                     borderRadius: BorderRadius.circular(4),
                   ),
@@ -357,18 +371,27 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
     );
   }
 
-  Widget _buildChildChart(List<Expense> list) {
+  Widget _buildChildChart(List<Expense> list, List<String> orderedNames) {
     final byChild = _groupBy(list, (e) => e.childName);
     if (byChild.isEmpty) return const SizedBox();
 
-    final children = byChild.keys.toList();
+    final children = byChild.keys.toList()
+      ..sort((a, b) {
+        final ia = orderedNames.indexOf(a);
+        final ib = orderedNames.indexOf(b);
+        if (ia == -1 && ib == -1) return a.compareTo(b);
+        if (ia == -1) return 1;
+        if (ib == -1) return -1;
+        return ia.compareTo(ib);
+      });
     final maxVal = byChild.values.fold(0, max).toDouble();
+    final childMaxY = (maxVal / 10000).ceilToDouble() * 1.2;
     final colors = [
-      Colors.blue,
-      Colors.orange,
-      Colors.green,
-      Colors.purple,
-      Colors.pink
+      const Color(0xFFA2CFFE),
+      const Color(0xFFFFB7B2),
+      const Color(0xFFB2E2F2),
+      const Color(0xFFD4B8E0),
+      const Color(0xFFFFD6A5),
     ];
 
     return _ChartCard(
@@ -377,7 +400,7 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
         height: 200,
         child: BarChart(
         BarChartData(
-          maxY: (maxVal / 10000).ceilToDouble() * 1.2,
+          maxY: childMaxY,
           barTouchData: BarTouchData(
             touchTooltipData: BarTouchTooltipData(
               getTooltipColor: (_) => Colors.black87,
@@ -406,10 +429,13 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
               sideTitles: SideTitles(
                 showTitles: true,
                 reservedSize: 48,
-                getTitlesWidget: (v, _) => Text(
-                  '${v.toInt()}만',
-                  style: const TextStyle(fontSize: 10),
-                ),
+                getTitlesWidget: (v, _) {
+                  if ((v - childMaxY).abs() < 0.01) return const SizedBox();
+                  return Text(
+                    '${v.toInt()}만',
+                    style: const TextStyle(fontSize: 10),
+                  );
+                },
               ),
             ),
             topTitles:
@@ -453,14 +479,14 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
     final subjects = bySubject.keys.toList();
     final total = bySubject.values.fold(0, (a, b) => a + b);
     final colors = [
-      const Color(0xFF2196F3),
-      const Color(0xFF4CAF50),
-      const Color(0xFFFF9800),
-      const Color(0xFF9C27B0),
-      const Color(0xFFE91E63),
-      const Color(0xFF009688),
-      const Color(0xFFFF5722),
-      const Color(0xFF607D8B),
+      const Color(0xFFA2CFFE),
+      const Color(0xFFB2E2F2),
+      const Color(0xFFFFB7B2),
+      const Color(0xFFD4B8E0),
+      const Color(0xFFFFD6A5),
+      const Color(0xFFA8DCD1),
+      const Color(0xFFF5C6AA),
+      const Color(0xFFBCC5CE),
     ];
 
     return _ChartCard(
@@ -576,9 +602,15 @@ class _SummaryCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
+          color: color.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
           children: [
@@ -617,12 +649,12 @@ class _ChartCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 8,
-              offset: const Offset(0, 2))
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 16,
+              offset: const Offset(0, 3))
         ],
       ),
       child: Column(

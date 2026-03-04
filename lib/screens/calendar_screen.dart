@@ -4,6 +4,7 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:k_academy__app/models/expense.dart';
 import 'package:k_academy__app/providers/auth_provider.dart';
 import 'package:k_academy__app/providers/child_filter_provider.dart';
+import 'package:k_academy__app/providers/dropdown_provider.dart';
 import 'package:k_academy__app/providers/expense_provider.dart';
 import 'package:k_academy__app/providers/selected_date_provider.dart';
 import 'package:k_academy__app/widgets/child_filter_dropdown.dart';
@@ -32,6 +33,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final selectedChild = context.watch<ChildFilterProvider>().selectedChild;
+    final childOrder = context.watch<DropdownProvider>().childNames;
 
     return Scaffold(
       appBar: AppBar(
@@ -185,7 +187,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  Expanded(child: _buildExpenseList(expenseProvider, selectedChild)),
+                  Expanded(child: _buildExpenseList(expenseProvider, selectedChild, childOrder)),
                 ],
               ),
 
@@ -271,7 +273,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildExpenseList(ExpenseProvider expenseProvider, String? selectedChild) {
+  Widget _buildExpenseList(ExpenseProvider expenseProvider, String? selectedChild, List<String> childOrder) {
     List<Expense> expenses;
     String emptyMessage;
 
@@ -290,6 +292,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     if (selectedChild != null) {
       expenses = expenses.where((e) => e.childName == selectedChild).toList();
+    }
+
+    // 자녀 드롭다운 순서로 정렬 (같은 날짜 내에서)
+    if (selectedChild == null && childOrder.isNotEmpty) {
+      expenses.sort((a, b) {
+        final dateCmp = a.paymentDate.compareTo(b.paymentDate);
+        if (dateCmp != 0) return dateCmp;
+        final ia = childOrder.indexOf(a.childName);
+        final ib = childOrder.indexOf(b.childName);
+        return (ia == -1 ? 999 : ia).compareTo(ib == -1 ? 999 : ib);
+      });
     }
 
     if (expenses.isEmpty) {
@@ -313,10 +326,21 @@ class _CalendarScreenState extends State<CalendarScreen> {
       );
     }
 
+    final itemCount = expenses.length + (_selectedDay != null ? 1 : 0);
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: expenses.length,
+      itemCount: itemCount,
       itemBuilder: (context, index) {
+        if (index == expenses.length) {
+          return const Padding(
+            padding: EdgeInsets.only(top: 16),
+            child: Text(
+              '이달의 지출 내역을 보려면 캘린더의 월을 클릭하세요',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: Colors.black),
+            ),
+          );
+        }
         final expense = expenses[index];
         return Card(
           margin: const EdgeInsets.only(bottom: 8),
@@ -345,19 +369,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   '금액: ${_formatNumber(expense.amount)}원',
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.blue,
+                    color: Color(0xFF7BA4D4),
                   ),
                 ),
                 if (expense.cancellationAmount > 0)
                   Text(
                     '취소금액: ${_formatNumber(expense.cancellationAmount)}원',
-                    style: const TextStyle(color: Colors.red),
+                    style: const TextStyle(color: Color(0xFFD48A8A)),
                   ),
                 if (expense.isRefunded)
                   const Text(
                     '환불됨',
                     style: TextStyle(
-                        color: Colors.orange, fontWeight: FontWeight.bold),
+                        color: Color(0xFFE8B87D), fontWeight: FontWeight.bold),
                   ),
               ],
             ),
@@ -365,7 +389,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               expense.classType,
               style: TextStyle(
                 color:
-                    expense.classType == '현강' ? Colors.green : Colors.purple,
+                    expense.classType == '현강' ? const Color(0xFF8DC6A0) : const Color(0xFFB49ACC),
                 fontWeight: FontWeight.bold,
               ),
             ),

@@ -56,16 +56,16 @@ const String childNameOrderBoxName = 'childNameOrder';
 
 // 시간표 색상 팔레트
 const List<int> scheduleColorValues = [
-  0xFF2196F3, // Blue
-  0xFF4CAF50, // Green
-  0xFFFF9800, // Orange
-  0xFF9C27B0, // Purple
-  0xFFE91E63, // Pink
-  0xFF009688, // Teal
-  0xFFFF5722, // Deep Orange
-  0xFF607D8B, // Blue Grey
-  0xFF795548, // Brown
-  0xFF00BCD4, // Cyan
+  0xFFA2CFFE, // Blue
+  0xFFB2E2C8, // Green
+  0xFFFFD6A5, // Orange
+  0xFFD4B8E0, // Purple
+  0xFFFFB7B2, // Pink
+  0xFFA8DCD1, // Teal
+  0xFFF5C6AA, // Deep Orange
+  0xFFBCC5CE, // Blue Grey
+  0xFFC9B09E, // Brown
+  0xFFB2E2F2, // Cyan
 ];
 
 // "기타" 및 "새로 추가" 상수

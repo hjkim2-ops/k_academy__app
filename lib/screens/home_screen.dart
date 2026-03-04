@@ -41,7 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
           NavigationDestination(
             icon: Icon(Icons.bar_chart_outlined),
             selectedIcon: Icon(Icons.bar_chart),
-            label: '지출통계',
+            label: '지출 통계',
           ),
           NavigationDestination(
             icon: Icon(Icons.schedule_outlined),

@@ -26,7 +26,7 @@ class SplashScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF5F7FA),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -65,9 +65,9 @@ class SplashScreen extends StatelessWidget {
                       // 맛보기 버튼
                       _OptionCard(
                         icon: Icons.preview_outlined,
-                        title: '맛보기로 시작하기',
+                        title: '둘러보기',
                         subtitle: '데이터 10개까지 무료 체험',
-                        color: Colors.orange,
+                        color: const Color(0xFFE8B87D),
                         onTap: auth.isLoading ? null : () => _startTrial(context),
                       ),
 
@@ -76,9 +76,9 @@ class SplashScreen extends StatelessWidget {
                       // Google 로그인 버튼
                       _OptionCard(
                         icon: Icons.login_rounded,
-                        title: '제대로 시작하기',
-                        subtitle: 'Google 로그인 · 무제한 입력 · 클라우드 저장',
-                        color: Colors.blue,
+                        title: '정식 서비스 이용하기',
+                        subtitle: 'Google 로그인 · 클라우드 저장',
+                        color: const Color(0xFF7BA4D4),
                         isLoading: auth.isLoading,
                         onTap: auth.isLoading
                             ? null
@@ -117,7 +117,7 @@ class SplashScreen extends StatelessWidget {
 
                       // 하단 안내
                       Text(
-                        '맛보기 모드는 기기에 저장됩니다.\n제대로 시작하기는 Google 계정에 연동됩니다.',
+                        '둘러보기는 기기에 저장됩니다.\n정식 서비스는 Google 계정에 연동됩니다.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 12,
@@ -158,11 +158,11 @@ class _OptionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: color.withValues(alpha: 0.08),
-      borderRadius: BorderRadius.circular(16),
+      color: color.withValues(alpha: 0.1),
+      borderRadius: BorderRadius.circular(20),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         splashColor: color.withValues(alpha: 0.15),
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -176,7 +176,7 @@ class _OptionCard extends StatelessWidget {
                   color: onTap == null
                       ? Colors.grey
                       : color,
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 child: isLoading
                     ? const Padding(

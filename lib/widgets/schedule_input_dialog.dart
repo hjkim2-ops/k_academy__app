@@ -59,9 +59,10 @@ class _ScheduleInputDialogState extends State<ScheduleInputDialog> {
       '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
   Future<void> _pickTime(bool isStart) async {
-    final picked = await showTimePicker(
+    final initial = isStart ? _startTime : _endTime;
+    final picked = await showDialog<TimeOfDay>(
       context: context,
-      initialTime: isStart ? _startTime : _endTime,
+      builder: (ctx) => _ScrollTimePicker(initial: initial),
     );
     if (picked != null) {
       setState(() {
@@ -731,6 +732,116 @@ class _TimeButton extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ScrollTimePicker extends StatefulWidget {
+  final TimeOfDay initial;
+  const _ScrollTimePicker({required this.initial});
+
+  @override
+  State<_ScrollTimePicker> createState() => _ScrollTimePickerState();
+}
+
+class _ScrollTimePickerState extends State<_ScrollTimePicker> {
+  late FixedExtentScrollController _hourCtrl;
+  late FixedExtentScrollController _minuteCtrl;
+  late int _hour;
+  late int _minute;
+
+  @override
+  void initState() {
+    super.initState();
+    _hour = widget.initial.hour;
+    _minute = widget.initial.minute;
+    _hourCtrl = FixedExtentScrollController(initialItem: _hour);
+    _minuteCtrl = FixedExtentScrollController(initialItem: _minute);
+  }
+
+  @override
+  void dispose() {
+    _hourCtrl.dispose();
+    _minuteCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      contentPadding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+      content: SizedBox(
+        height: 180,
+        child: Row(
+          children: [
+            // 시
+            Expanded(
+              child: ListWheelScrollView.useDelegate(
+                controller: _hourCtrl,
+                itemExtent: 40,
+                physics: const FixedExtentScrollPhysics(),
+                onSelectedItemChanged: (i) => setState(() => _hour = i),
+                childDelegate: ListWheelChildBuilderDelegate(
+                  childCount: 24,
+                  builder: (context, index) {
+                    final selected = index == _hour;
+                    return Center(
+                      child: Text(
+                        '$index시',
+                        style: TextStyle(
+                          fontSize: selected ? 20 : 18,
+                          fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                          color: selected ? const Color(0xFF7BA4D4) : const Color(0xFF9E9E9E),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+            const Text(':', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            // 분
+            Expanded(
+              child: ListWheelScrollView.useDelegate(
+                controller: _minuteCtrl,
+                itemExtent: 40,
+                physics: const FixedExtentScrollPhysics(),
+                onSelectedItemChanged: (i) => setState(() => _minute = i),
+                childDelegate: ListWheelChildBuilderDelegate(
+                  childCount: 60,
+                  builder: (context, index) {
+                    final selected = index == _minute;
+                    return Center(
+                      child: Text(
+                        '${index.toString().padLeft(2, '0')}분',
+                        style: TextStyle(
+                          fontSize: selected ? 20 : 18,
+                          fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                          color: selected ? const Color(0xFF7BA4D4) : const Color(0xFF9E9E9E),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actionsPadding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('취소'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(
+            TimeOfDay(hour: _hour, minute: _minute),
+          ),
+          child: const Text('확인'),
+        ),
+      ],
     );
   }
 }

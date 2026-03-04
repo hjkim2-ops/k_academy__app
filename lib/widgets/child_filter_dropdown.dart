@@ -27,11 +27,9 @@ class _ChildFilterDropdownState extends State<ChildFilterDropdown> {
       builder: (ctx) => _ChildReorderDialog(
         children: children,
         effective: effective,
-        onSelected: (child) {
-          filterProvider.select(child);
-        },
-        onReorder: (oldIndex, newIndex) {
-          dropdownProvider.reorderChildNames(oldIndex, newIndex);
+        onApply: (orderedChildren, selected) {
+          dropdownProvider.applyChildNameOrder(orderedChildren);
+          filterProvider.select(selected);
         },
       ),
     );
@@ -95,14 +93,12 @@ class _ChildFilterDropdownState extends State<ChildFilterDropdown> {
 class _ChildReorderDialog extends StatefulWidget {
   final List<String> children;
   final String? effective;
-  final ValueChanged<String?> onSelected;
-  final void Function(int oldIndex, int newIndex) onReorder;
+  final void Function(List<String> orderedChildren, String? selected) onApply;
 
   const _ChildReorderDialog({
     required this.children,
     required this.effective,
-    required this.onSelected,
-    required this.onReorder,
+    required this.onApply,
   });
 
   @override
@@ -111,11 +107,13 @@ class _ChildReorderDialog extends StatefulWidget {
 
 class _ChildReorderDialogState extends State<_ChildReorderDialog> {
   late List<String> _orderedChildren;
+  late String? _selected;
 
   @override
   void initState() {
     super.initState();
     _orderedChildren = List.from(widget.children);
+    _selected = widget.effective;
   }
 
   @override
@@ -142,19 +140,15 @@ class _ChildReorderDialogState extends State<_ChildReorderDialog> {
                     final item = _orderedChildren.removeAt(oldIndex);
                     _orderedChildren.insert(newIndex, item);
                   });
-                  widget.onReorder(oldIndex, newIndex);
                 },
                 itemBuilder: (context, index) {
                   final name = _orderedChildren[index];
-                  final isSelected = widget.effective == name;
+                  final isSelected = _selected == name;
                   return Material(
                     key: ValueKey(name),
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: () {
-                        widget.onSelected(name);
-                        Navigator.of(context).pop();
-                      },
+                      onTap: () => setState(() => _selected = name),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 20, vertical: 12),
@@ -162,7 +156,7 @@ class _ChildReorderDialogState extends State<_ChildReorderDialog> {
                           children: [
                             if (isSelected)
                               const Icon(Icons.check,
-                                  size: 16, color: Colors.blue)
+                                  size: 16, color: Color(0xFF7BA4D4))
                             else
                               const SizedBox(width: 16),
                             const SizedBox(width: 10),
@@ -175,7 +169,7 @@ class _ChildReorderDialogState extends State<_ChildReorderDialog> {
                                       ? FontWeight.w600
                                       : FontWeight.normal,
                                   color:
-                                      isSelected ? Colors.blue : Colors.black87,
+                                      isSelected ? const Color(0xFF7BA4D4) : const Color(0xFF4A4A4A),
                                 ),
                               ),
                             ),
@@ -195,17 +189,14 @@ class _ChildReorderDialogState extends State<_ChildReorderDialog> {
             const Divider(height: 1),
             // 전체 자녀
             InkWell(
-              onTap: () {
-                widget.onSelected(null);
-                Navigator.of(context).pop();
-              },
+              onTap: () => setState(() => _selected = null),
               child: Padding(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 child: Row(
                   children: [
-                    if (widget.effective == null)
-                      const Icon(Icons.check, size: 16, color: Colors.blue)
+                    if (_selected == null)
+                      const Icon(Icons.check, size: 16, color: Color(0xFF7BA4D4))
                     else
                       const SizedBox(width: 16),
                     const SizedBox(width: 10),
@@ -213,16 +204,38 @@ class _ChildReorderDialogState extends State<_ChildReorderDialog> {
                       '전체 자녀',
                       style: TextStyle(
                         fontSize: 15,
-                        fontWeight: widget.effective == null
+                        fontWeight: _selected == null
                             ? FontWeight.w600
                             : FontWeight.normal,
-                        color: widget.effective == null
-                            ? Colors.blue
-                            : Colors.black87,
+                        color: _selected == null
+                            ? const Color(0xFF7BA4D4)
+                            : const Color(0xFF4A4A4A),
                       ),
                     ),
                   ],
                 ),
+              ),
+            ),
+            const Divider(height: 1),
+            // 취소 / 적용 버튼
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('취소'),
+                  ),
+                  const SizedBox(width: 16),
+                  FilledButton(
+                    onPressed: () {
+                      widget.onApply(_orderedChildren, _selected);
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text('적용'),
+                  ),
+                ],
               ),
             ),
           ],
@@ -245,12 +258,12 @@ class _Pill extends StatelessWidget {
       alignment: Alignment.center,
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.78),
-        borderRadius: BorderRadius.circular(10),
+        color: Colors.white.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 6,
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 12,
             offset: const Offset(0, 2),
           ),
         ],
@@ -263,7 +276,7 @@ class _Pill extends StatelessWidget {
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: Colors.black87,
+              color: const Color(0xFF4A4A4A),
               letterSpacing: -0.2,
             ),
           ),

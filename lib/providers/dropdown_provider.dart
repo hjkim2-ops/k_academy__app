@@ -337,6 +337,14 @@ class DropdownProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// 다이얼로그에서 '적용' 시 최종 순서를 한 번에 저장
+  Future<void> applyChildNameOrder(List<String> orderedChildren) async {
+    _childNameOrder = orderedChildren;
+    await _historyService.saveChildNameOrder(_childNameOrder);
+    await _syncToCloud();
+    notifyListeners();
+  }
+
   /// 현재 존재하는 자녀 목록과 순서를 동기화 (새 자녀 추가 시 순서에 반영)
   void syncChildNameOrder(List<String> currentChildren) {
     final ordered = <String>[];

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:k_academy__app/models/schedule.dart';
 import 'package:k_academy__app/providers/auth_provider.dart';
 import 'package:k_academy__app/providers/child_filter_provider.dart';
+import 'package:k_academy__app/providers/dropdown_provider.dart';
 import 'package:k_academy__app/providers/schedule_provider.dart';
 import 'package:k_academy__app/providers/selected_date_provider.dart';
 import 'package:k_academy__app/screens/home_screen.dart';
@@ -70,6 +71,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+    final childOrder = context.watch<DropdownProvider>().childNames;
     final weekStartDate =
         _getWeekStart(context.watch<SelectedDateProvider>().selectedDate);
 
@@ -120,8 +122,8 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                 child: TabBarView(
                   controller: _tabController,
                   children: [
-                    _buildTimetable(schedules),
-                    _buildWeeklyTimetable(schedules, weekStartDate),
+                    _buildTimetable(schedules, childOrder),
+                    _buildWeeklyTimetable(schedules, weekStartDate, childOrder),
                     _buildList(provider, schedules),
                   ],
                 ),
@@ -141,18 +143,22 @@ class _ScheduleScreenState extends State<ScheduleScreen>
 
   // ────────────────── 겹침 레이아웃 계산 ──────────────────
   /// 같은 요일에서 시간이 겹치는 블록을 찾아 column/totalColumns를 할당
-  List<_OverlapInfo> _computeOverlapLayout(List<Schedule> schedules) {
+  List<_OverlapInfo> _computeOverlapLayout(List<Schedule> schedules, List<String> orderedNames) {
     final result = <_OverlapInfo>[];
 
     for (int day = 1; day <= 7; day++) {
       final dayList = schedules.where((s) => s.dayOfWeek == day).toList();
       if (dayList.isEmpty) continue;
 
-      // 시작 시간순 정렬
+      // 시작 시간순 정렬, 같은 시간이면 자녀 드롭다운 순서대로
       dayList.sort((a, b) {
         final cmp = (a.startHour * 60 + a.startMinute)
             .compareTo(b.startHour * 60 + b.startMinute);
         if (cmp != 0) return cmp;
+        final ia = orderedNames.indexOf(a.childName);
+        final ib = orderedNames.indexOf(b.childName);
+        final childCmp = (ia == -1 ? 999 : ia).compareTo(ib == -1 ? 999 : ib);
+        if (childCmp != 0) return childCmp;
         return b.durationMinutes.compareTo(a.durationMinutes);
       });
 
@@ -205,9 +211,25 @@ class _ScheduleScreenState extends State<ScheduleScreen>
   }
 
   // ────────────────── 공통 그리드 렌더링 ──────────────────
-  Widget _buildGrid(List<Schedule> schedules) {
-    final totalHeight = (_endHour - _startHour) * _pixelsPerHour;
-    final layoutInfos = _computeOverlapLayout(schedules);
+  Widget _buildGrid(List<Schedule> schedules, List<String> childOrder) {
+    final layoutInfos = _computeOverlapLayout(schedules, childOrder);
+
+    // 스케줄이 있는 시간 범위 계산 (앞뒤 1시간 여유)
+    int visibleStart = _endHour;
+    int visibleEnd = _startHour;
+    for (final s in schedules) {
+      if (s.startHour < visibleStart) visibleStart = s.startHour;
+      final endH = s.endMinute > 0 ? s.endHour + 1 : s.endHour;
+      if (endH > visibleEnd) visibleEnd = endH;
+    }
+    visibleStart = max(visibleStart - 1, _startHour);
+    visibleEnd = min(visibleEnd + 1, _endHour);
+    if (visibleStart >= visibleEnd) {
+      visibleStart = _startHour;
+      visibleEnd = _endHour;
+    }
+
+    final totalHeight = (visibleEnd - visibleStart) * _pixelsPerHour;
 
     return Expanded(
       child: SingleChildScrollView(
@@ -220,12 +242,12 @@ class _ScheduleScreenState extends State<ScheduleScreen>
               SizedBox(
                 width: _timeColWidth,
                 child: Stack(
-                  children: List.generate(_endHour - _startHour, (i) {
+                  children: List.generate(visibleEnd - visibleStart, (i) {
                     return Positioned(
                       top: i * _pixelsPerHour - 7,
                       right: 4,
                       child: Text(
-                        '${_startHour + i}',
+                        '${visibleStart + i}',
                         style:
                             TextStyle(fontSize: 10, color: Colors.grey[500]),
                       ),
@@ -242,7 +264,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                       children: [
                         // 시간 구분선
                         ...List.generate(
-                            _endHour - _startHour,
+                            visibleEnd - visibleStart,
                             (i) => Positioned(
                                   top: i * _pixelsPerHour,
                                   left: 0,
@@ -263,7 +285,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                         // 시간표 블록 (겹침 레이아웃 적용)
                         ...layoutInfos.map((info) {
                           final s = info.schedule;
-                          final top = (s.startHour - _startHour) *
+                          final top = (s.startHour - visibleStart) *
                                   _pixelsPerHour +
                               s.startMinute * _pixelsPerHour / 60;
                           final height = max(
@@ -299,7 +321,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
   }
 
   // ────────────────── 시간표 뷰 ──────────────────
-  Widget _buildTimetable(List<Schedule> schedules) {
+  Widget _buildTimetable(List<Schedule> schedules, List<String> childOrder) {
     if (schedules.isEmpty) return _buildEmpty();
 
     return Column(
@@ -329,14 +351,14 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                 )),
           ],
         ),
-        _buildGrid(schedules),
+        _buildGrid(schedules, childOrder),
       ],
     );
   }
 
   // ────────────────── 이번주 시간표 뷰 ──────────────────
   Widget _buildWeeklyTimetable(
-      List<Schedule> schedules, DateTime weekStartDate) {
+      List<Schedule> schedules, DateTime weekStartDate, List<String> childOrder) {
     if (schedules.isEmpty) return _buildEmpty();
 
     // Filter: exclude schedules cancelled on this week's date
@@ -440,7 +462,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
             }),
           ],
         ),
-        _buildGrid(filtered),
+        _buildGrid(filtered, childOrder),
       ],
     );
   }
@@ -534,12 +556,31 @@ class _ScheduleScreenState extends State<ScheduleScreen>
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
-        title: Text('${schedule.subject} · ${schedule.childName}'),
-        content: Text('${schedule.dayName}요일  ${schedule.timeRange}'),
+        titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+        contentPadding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        title: null,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(schedule.childName,
+                style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 8),
+            Text(schedule.academyName,
+                style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 8),
+            Text(schedule.subject,
+                style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 8),
+            Text('${schedule.dayName}요일  ${schedule.timeRange}',
+                style: const TextStyle(fontSize: 16)),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogCtx).pop(),
-            child: const Text('취소'),
+            child: const Text('닫기'),
           ),
           TextButton(
             onPressed: () {
@@ -598,7 +639,7 @@ class _ScheduleBlock extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: schedule.color.withValues(alpha: 0.88),
+          color: schedule.color.withValues(alpha: 0.80),
           borderRadius: BorderRadius.circular(3),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
