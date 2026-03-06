@@ -86,6 +86,18 @@ class MyApp extends StatelessWidget {
           ),
           appBarTheme: const AppBarTheme(
             foregroundColor: Color(0xFF4A4A4A),
+            shape: RoundedRectangleBorder(),
+          ),
+          datePickerTheme: DatePickerThemeData(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
+          ),
+          tooltipTheme: const TooltipThemeData(
+            height: 0,
+            padding: EdgeInsets.zero,
+            decoration: BoxDecoration(color: Colors.transparent),
+            textStyle: TextStyle(fontSize: 0, color: Colors.transparent),
           ),
         ),
         localizationsDelegates: const [

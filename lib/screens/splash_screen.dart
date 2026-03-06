@@ -158,7 +158,7 @@ class _OptionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: color.withValues(alpha: 0.1),
+      color: color.withValues(alpha: 0.18),
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         onTap: onTap,

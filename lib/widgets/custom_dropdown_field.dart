@@ -164,6 +164,7 @@ class _SelectionDialogState extends State<_SelectionDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      titlePadding: const EdgeInsets.fromLTRB(24, 12, 8, 0),
       title: Row(
         children: [
           Expanded(

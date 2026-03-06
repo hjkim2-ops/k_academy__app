@@ -44,6 +44,7 @@ class _ExpenseInputDialogState extends State<ExpenseInputDialog> {
   String _paymentMethod = paymentMethods[0]; // Default: 카드
   String? _cardName;
   bool _isRefunded = false;
+  List<String> _calendarLabels = ['강사'];
 
   @override
   void initState() {
@@ -65,6 +66,7 @@ class _ExpenseInputDialogState extends State<ExpenseInputDialog> {
       _cancellationAmountController.text = _formatNumber(expense.cancellationAmount);
       _isRefunded = expense.isRefunded;
       _memoController.text = expense.memo ?? '';
+      _calendarLabels = List<String>.from(expense.calendarLabels);
     } else {
       // Add mode: use selected date
       _paymentDate = widget.selectedDate;
@@ -100,7 +102,7 @@ class _ExpenseInputDialogState extends State<ExpenseInputDialog> {
           children: [
             // 헤더
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 8, 0),
+              padding: const EdgeInsets.fromLTRB(20, 4, 4, 0),
               child: Row(
                 children: [
                   Text(
@@ -171,7 +173,7 @@ class _ExpenseInputDialogState extends State<ExpenseInputDialog> {
 
                 // 3. 상호
                 CustomDropdownField(
-                  label: '상호',
+                  label: '학원',
                   value: _businessName,
                   options: dropdownProvider.businessNames,
                   onChanged: (value) {
@@ -277,7 +279,6 @@ class _ExpenseInputDialogState extends State<ExpenseInputDialog> {
                       '수업 형태 *',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.black54,
                       ),
                     ),
                     Row(
@@ -424,6 +425,50 @@ class _ExpenseInputDialogState extends State<ExpenseInputDialog> {
                   ),
                   maxLines: 3,
                 ),
+                const SizedBox(height: 16),
+
+                // 13. 캘린더 표시 항목
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '캘린더에 표시할 항목',
+                      style: TextStyle(
+                        fontSize: 12,
+                      ),
+                    ),
+                    Row(
+                      children: ['학원', '과목', '강사'].map((label) {
+                        final isSelected = _calendarLabels.contains(label);
+                        return Expanded(
+                          child: InkWell(
+                            onTap: () {
+                              setState(() {
+                                if (isSelected) {
+                                  _calendarLabels.remove(label);
+                                } else {
+                                  _calendarLabels.add(label);
+                                }
+                              });
+                            },
+                            child: Row(
+                              children: [
+                                IgnorePointer(
+                                  child: Radio<bool>(
+                                    value: true,
+                                    groupValue: isSelected,
+                                    onChanged: (_) {},
+                                  ),
+                                ),
+                                Text(label),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 24),
 
                     ],
@@ -473,6 +518,7 @@ class _ExpenseInputDialogState extends State<ExpenseInputDialog> {
       initialDate: _paymentDate ?? DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
+      initialEntryMode: DatePickerEntryMode.calendarOnly,
     );
 
     if (picked != null) {
@@ -529,6 +575,7 @@ class _ExpenseInputDialogState extends State<ExpenseInputDialog> {
       cancellationAmount: parseFormattedNumber(_cancellationAmountController.text),
       isRefunded: _isRefunded,
       memo: _memoController.text.trim().isEmpty ? null : _memoController.text.trim(),
+      calendarLabels: _calendarLabels,
     );
 
     if (widget.existingExpense != null) {

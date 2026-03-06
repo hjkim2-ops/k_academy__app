@@ -26,7 +26,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
   static const double _pixelsPerHour = 60.0;
   static const int _startHour = 7;
   static const int _endHour = 23;
-  static const double _timeColWidth = 44.0;
+  static const double _timeColWidth = 52.0;
 
   static const _days = ['월', '화', '수', '목', '금', '토', '일'];
 
@@ -55,7 +55,8 @@ class _ScheduleScreenState extends State<ScheduleScreen>
       initialDate: dateProv.selectedDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
-      helpText: '선택한 날짜를 포함한 주\n(월요일부터 일요일)가 선택됩니다',
+      helpText: '선택한 날짜를 포함한 주 (월~일)가 선택됩니다',
+      initialEntryMode: DatePickerEntryMode.calendarOnly,
     );
     if (picked != null) {
       dateProv.selectDate(picked);
@@ -103,7 +104,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
           controller: _tabController,
           tabs: const [
             Tab(icon: Icon(Icons.grid_view), text: '시간표'),
-            Tab(icon: Icon(Icons.view_week), text: '이번주'),
+            Tab(icon: Icon(Icons.view_week), text: '이번주 시간표'),
             Tab(icon: Icon(Icons.list), text: '목록'),
           ],
         ),
@@ -233,8 +234,9 @@ class _ScheduleScreenState extends State<ScheduleScreen>
 
     return Expanded(
       child: SingleChildScrollView(
-        child: SizedBox(
+        child: Container(
           height: totalHeight,
+          color: Colors.white,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -269,8 +271,8 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                                   top: i * _pixelsPerHour,
                                   left: 0,
                                   right: 0,
-                                  child: Divider(
-                                      height: 0, color: Colors.grey[200]),
+                                  child: const Divider(
+                                      height: 0, color: Color(0xFFE0E0E0)),
                                 )),
                         // 요일 구분선
                         ...List.generate(
@@ -279,8 +281,8 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                                   left: i * colWidth,
                                   top: 0,
                                   bottom: 0,
-                                  child: VerticalDivider(
-                                      width: 0, color: Colors.grey[200]),
+                                  child: const VerticalDivider(
+                                      width: 0, color: Color(0xFFE0E0E0)),
                                 )),
                         // 시간표 블록 (겹침 레이아웃 적용)
                         ...layoutInfos.map((info) {
@@ -293,9 +295,9 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                               18.0);
                           final dayLeft = (s.dayOfWeek - 1) * colWidth;
                           final slotWidth =
-                              (colWidth - 2) / info.totalColumns;
+                              colWidth / info.totalColumns;
                           final left =
-                              dayLeft + 1 + info.column * slotWidth;
+                              dayLeft + info.column * slotWidth;
                           return Positioned(
                             top: top,
                             left: left,
@@ -335,8 +337,8 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                     height: 32,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      border: Border(
-                          bottom: BorderSide(color: Colors.grey[300]!)),
+                      border: const Border(
+                          bottom: BorderSide(color: Color(0xFFE0E0E0))),
                     ),
                     child: Text(d,
                         style: TextStyle(
@@ -496,6 +498,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
             ),
             ...daySchedules.map((s) => Card(
                   margin: const EdgeInsets.only(bottom: 6),
+                  clipBehavior: Clip.antiAlias,
                   child: ListTile(
                     leading: CircleAvatar(
                       backgroundColor: s.color,
@@ -577,24 +580,8 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                 style: const TextStyle(fontSize: 16)),
           ],
         ),
+        actionsAlignment: MainAxisAlignment.spaceBetween,
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogCtx).pop(),
-            child: const Text('닫기'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(dialogCtx).pop();
-              if (context.mounted) {
-                showDialog(
-                  context: context,
-                  builder: (_) =>
-                      ScheduleInputDialog(existingSchedule: schedule),
-                );
-              }
-            },
-            child: const Text('수정'),
-          ),
           TextButton(
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             onPressed: () async {
@@ -606,6 +593,28 @@ class _ScheduleScreenState extends State<ScheduleScreen>
               }
             },
             child: const Text('삭제'),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogCtx).pop(),
+                child: const Text('닫기'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(dialogCtx).pop();
+                  if (context.mounted) {
+                    showDialog(
+                      context: context,
+                      builder: (_) =>
+                          ScheduleInputDialog(existingSchedule: schedule),
+                    );
+                  }
+                },
+                child: const Text('수정'),
+              ),
+            ],
           ),
         ],
       ),
@@ -646,33 +655,51 @@ class _ScheduleBlock extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (schedule.academyName.isNotEmpty && blockHeight >= 28)
+            if (schedule.timetableLabels.contains('학원') &&
+                schedule.academyName.isNotEmpty)
               Text(
                 schedule.academyName,
-                style: const TextStyle(color: Colors.white70, fontSize: 7),
+                style: const TextStyle(
+                    color: Color(0xFF333333),
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-            Text(
-              schedule.subject,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 9,
-                  fontWeight: FontWeight.bold),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            if (blockHeight >= 36)
+            if (schedule.timetableLabels.contains('과목'))
+              Text(
+                schedule.subject,
+                style: const TextStyle(
+                    color: Color(0xFF333333),
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            if (schedule.timetableLabels.contains('강사') &&
+                schedule.instructor.isNotEmpty)
+              Text(
+                schedule.instructor,
+                style: const TextStyle(
+                    color: Color(0xFF333333),
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            if (schedule.timetableLabels.contains('수업 시간') &&
+                blockHeight >= 36)
               Text(
                 schedule.timeRange,
-                style: const TextStyle(color: Colors.white70, fontSize: 8),
+                style: const TextStyle(color: Color(0xFF333333), fontSize: 8),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-            if (schedule.classType == '라이브' && blockHeight >= 48)
+            if (schedule.timetableLabels.contains('수업 형태') &&
+                blockHeight >= 48)
               Text(
-                '라이브',
-                style: const TextStyle(color: Colors.white70, fontSize: 7),
+                schedule.classType,
+                style: const TextStyle(color: Color(0xFF333333), fontSize: 7),
                 maxLines: 1,
               ),
           ],

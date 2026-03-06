@@ -33,7 +33,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final selectedChild = context.watch<ChildFilterProvider>().selectedChild;
-    final childOrder = context.watch<DropdownProvider>().childNames;
 
     return Scaffold(
       appBar: AppBar(
@@ -86,8 +85,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ),
         ],
       ),
-      body: Consumer<ExpenseProvider>(
-        builder: (context, expenseProvider, child) {
+      body: Consumer2<ExpenseProvider, DropdownProvider>(
+        builder: (context, expenseProvider, dropdownProv, child) {
+          final childOrder = dropdownProv.childNames;
           return Stack(
             children: [
               Column(
@@ -128,12 +128,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       markerBuilder: (context, date, events) {
                         if (events.isEmpty) return null;
                         final expenses = events.cast<Expense>();
-                        final instructors = expenses
-                            .map((e) => e.instructor)
-                            .where((name) => name.isNotEmpty)
-                            .toSet()
-                            .toList();
-                        if (instructors.isEmpty) return null;
+                        final labels = <String>{};
+                        for (final expense in expenses) {
+                          for (final label in expense.calendarLabels) {
+                            String? value;
+                            if (label == '학원') value = expense.businessName;
+                            if (label == '과목') value = expense.subject;
+                            if (label == '강사') value = expense.instructor;
+                            if (value != null && value.isNotEmpty) {
+                              labels.add(value);
+                            }
+                          }
+                        }
+                        if (labels.isEmpty) return null;
+                        final labelList = labels.toList();
                         return Positioned(
                           bottom: 1,
                           child: Container(
@@ -141,7 +149,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                ...instructors.take(2).map((name) => Text(
+                                ...labelList.take(2).map((name) => Text(
                                       name,
                                       style: const TextStyle(
                                         fontSize: 9,
@@ -151,9 +159,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     )),
-                                if (instructors.length > 2)
+                                if (labelList.length > 2)
                                   Text(
-                                    '+${instructors.length - 2}개',
+                                    '+${labelList.length - 2}개',
                                     style: const TextStyle(
                                         fontSize: 8, color: Colors.grey),
                                   ),
@@ -223,7 +231,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         title: Row(
           children: [
             Icon(Icons.lock_outline, color: Colors.orange[700]),
@@ -248,7 +256,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               backgroundColor: Colors.blue,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+                  borderRadius: BorderRadius.circular(4)),
             ),
             onPressed: () async {
               Navigator.of(dialogCtx).pop();
@@ -344,6 +352,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         final expense = expenses[index];
         return Card(
           margin: const EdgeInsets.only(bottom: 8),
+          clipBehavior: Clip.antiAlias,
           child: ListTile(
             onTap: () => _showExpenseOptionsDialog(context, expense),
             title: Text(
@@ -381,7 +390,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   const Text(
                     '환불됨',
                     style: TextStyle(
-                        color: Color(0xFFE8B87D), fontWeight: FontWeight.bold),
+                        color: Color(0xFFD4922A), fontWeight: FontWeight.bold),
                   ),
               ],
             ),
@@ -412,14 +421,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
       builder: (dialogCtx) => AlertDialog(
         title: const Text('지출 내역 관리'),
         content: const Text('작업을 선택하세요'),
+        actionsAlignment: MainAxisAlignment.spaceBetween,
         actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(dialogCtx).pop();
-              if (context.mounted) _showEditExpenseDialog(context, expense);
-            },
-            child: const Text('수정'),
-          ),
           TextButton(
             onPressed: () async {
               Navigator.of(dialogCtx).pop();
@@ -427,6 +430,22 @@ class _CalendarScreenState extends State<CalendarScreen> {
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('삭제'),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogCtx).pop(),
+                child: const Text('닫기'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(dialogCtx).pop();
+                  if (context.mounted) _showEditExpenseDialog(context, expense);
+                },
+                child: const Text('수정'),
+              ),
+            ],
           ),
         ],
       ),

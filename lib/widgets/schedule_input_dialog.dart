@@ -31,6 +31,7 @@ class _ScheduleInputDialogState extends State<ScheduleInputDialog> {
   int _colorValue = 0xFF2196F3;
   String _memo = '';
   Set<String> _cancelledDates = {};
+  List<String> _timetableLabels = ['학원', '과목', '강사', '수업 시간'];
 
   bool get _isEditing => widget.existingSchedule != null;
 
@@ -52,6 +53,7 @@ class _ScheduleInputDialogState extends State<ScheduleInputDialog> {
       _colorValue = s.colorValue;
       _memo = s.memo ?? '';
       _cancelledDates = s.cancelledDates.toSet();
+      _timetableLabels = List<String>.from(s.timetableLabels);
     }
   }
 
@@ -303,6 +305,7 @@ class _ScheduleInputDialogState extends State<ScheduleInputDialog> {
         colorValue: _colorValue,
         memo: _memo.isEmpty ? null : _memo,
         cancelledDates: _cancelledDates.toList(),
+        timetableLabels: _timetableLabels,
       );
       provider.updateSchedule(updated);
     } else {
@@ -328,6 +331,7 @@ class _ScheduleInputDialogState extends State<ScheduleInputDialog> {
           isActive: true,
           memo: _memo.isEmpty ? null : _memo,
           cancelledDates: dayCancelled,
+          timetableLabels: _timetableLabels,
         ));
       }
     }
@@ -347,7 +351,7 @@ class _ScheduleInputDialogState extends State<ScheduleInputDialog> {
           children: [
             // 헤더
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 8, 0),
+              padding: const EdgeInsets.fromLTRB(20, 4, 4, 0),
               child: Row(
                 children: [
                   Text(
@@ -394,7 +398,7 @@ class _ScheduleInputDialogState extends State<ScheduleInputDialog> {
 
                       // 학원명
                       CustomDropdownField(
-                        label: '학원/상호명',
+                        label: '학원',
                         value: _academyName,
                         options: dropdownProvider.businessNames,
                         required: true,
@@ -459,7 +463,6 @@ class _ScheduleInputDialogState extends State<ScheduleInputDialog> {
                             '수업 형태 *',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.black54,
                             ),
                           ),
                           Row(
@@ -506,6 +509,7 @@ class _ScheduleInputDialogState extends State<ScheduleInputDialog> {
                           return FilterChip(
                             label: Text(_dayNames[i]),
                             selected: selected,
+                            showCheckmark: false,
                             onSelected: _isEditing
                                 ? null
                                 : (v) => setState(() {
@@ -639,6 +643,54 @@ class _ScheduleInputDialogState extends State<ScheduleInputDialog> {
                         initialValue: _memo,
                         hint: '메모 입력 (선택사항)',
                         onChanged: (v) => _memo = v,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // 시간표에 표시할 항목
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            '시간표에 표시할 항목',
+                            style: TextStyle(
+                              fontSize: 12,
+                            ),
+                          ),
+                          for (final row in [['학원', '과목'], ['강사', '수업 시간'], ['수업 형태']])
+                            Row(
+                              children: [
+                                ...row.map((label) {
+                                  final isSelected = _timetableLabels.contains(label);
+                                  return Expanded(
+                                    child: InkWell(
+                                      onTap: () {
+                                        setState(() {
+                                          if (isSelected) {
+                                            _timetableLabels.remove(label);
+                                          } else {
+                                            _timetableLabels.add(label);
+                                          }
+                                        });
+                                      },
+                                      child: Row(
+                                        children: [
+                                          IgnorePointer(
+                                            child: Radio<bool>(
+                                              value: true,
+                                              groupValue: isSelected,
+                                              onChanged: (_) {},
+                                            ),
+                                          ),
+                                          Text(label),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }),
+                                if (row.length < 2) const Expanded(child: SizedBox()),
+                              ],
+                            ),
+                        ],
                       ),
                     ],
                   ),
@@ -779,7 +831,7 @@ class _ScrollTimePickerState extends State<_ScrollTimePicker> {
             Expanded(
               child: ListWheelScrollView.useDelegate(
                 controller: _hourCtrl,
-                itemExtent: 40,
+                itemExtent: 38,
                 physics: const FixedExtentScrollPhysics(),
                 onSelectedItemChanged: (i) => setState(() => _hour = i),
                 childDelegate: ListWheelChildBuilderDelegate(
@@ -787,12 +839,21 @@ class _ScrollTimePickerState extends State<_ScrollTimePicker> {
                   builder: (context, index) {
                     final selected = index == _hour;
                     return Center(
-                      child: Text(
-                        '$index시',
-                        style: TextStyle(
-                          fontSize: selected ? 20 : 18,
-                          fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                          color: selected ? const Color(0xFF7BA4D4) : const Color(0xFF9E9E9E),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: selected
+                            ? BoxDecoration(
+                                color: const Color(0xFFF0F0F0),
+                                borderRadius: BorderRadius.circular(8),
+                              )
+                            : null,
+                        child: Text(
+                          '$index시',
+                          style: TextStyle(
+                            fontSize: selected ? 16 : 14,
+                            fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                            color: selected ? const Color(0xFF4A4A4A) : const Color(0xFFBDBDBD),
+                          ),
                         ),
                       ),
                     );
@@ -800,12 +861,12 @@ class _ScrollTimePickerState extends State<_ScrollTimePicker> {
                 ),
               ),
             ),
-            const Text(':', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            const Text(':', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF4A4A4A))),
             // 분
             Expanded(
               child: ListWheelScrollView.useDelegate(
                 controller: _minuteCtrl,
-                itemExtent: 40,
+                itemExtent: 38,
                 physics: const FixedExtentScrollPhysics(),
                 onSelectedItemChanged: (i) => setState(() => _minute = i),
                 childDelegate: ListWheelChildBuilderDelegate(
@@ -813,12 +874,21 @@ class _ScrollTimePickerState extends State<_ScrollTimePicker> {
                   builder: (context, index) {
                     final selected = index == _minute;
                     return Center(
-                      child: Text(
-                        '${index.toString().padLeft(2, '0')}분',
-                        style: TextStyle(
-                          fontSize: selected ? 20 : 18,
-                          fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                          color: selected ? const Color(0xFF7BA4D4) : const Color(0xFF9E9E9E),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: selected
+                            ? BoxDecoration(
+                                color: const Color(0xFFF0F0F0),
+                                borderRadius: BorderRadius.circular(8),
+                              )
+                            : null,
+                        child: Text(
+                          '${index.toString().padLeft(2, '0')}분',
+                          style: TextStyle(
+                            fontSize: selected ? 16 : 14,
+                            fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                            color: selected ? const Color(0xFF4A4A4A) : const Color(0xFFBDBDBD),
+                          ),
                         ),
                       ),
                     );

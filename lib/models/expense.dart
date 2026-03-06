@@ -46,6 +46,9 @@ class Expense extends HiveObject {
   @HiveField(13)
   final String? memo;
 
+  @HiveField(14)
+  final List<String> calendarLabels;
+
   Expense({
     required this.id,
     required this.childName,
@@ -61,6 +64,7 @@ class Expense extends HiveObject {
     required this.cancellationAmount,
     required this.isRefunded,
     this.memo,
+    this.calendarLabels = const ['강사'],
   });
 
   // Firestore 직렬화
@@ -79,6 +83,7 @@ class Expense extends HiveObject {
       'cancellationAmount': cancellationAmount,
       'isRefunded': isRefunded,
       'memo': memo,
+      'calendarLabels': calendarLabels,
     };
   }
 
@@ -98,6 +103,9 @@ class Expense extends HiveObject {
       cancellationAmount: map['cancellationAmount'] ?? 0,
       isRefunded: map['isRefunded'] ?? false,
       memo: map['memo'],
+      calendarLabels: map['calendarLabels'] != null
+          ? List<String>.from(map['calendarLabels'])
+          : const ['강사'],
     );
   }
 
@@ -124,6 +132,7 @@ class Expense extends HiveObject {
     int? cancellationAmount,
     bool? isRefunded,
     String? memo,
+    List<String>? calendarLabels,
   }) {
     return Expense(
       id: id ?? this.id,
@@ -140,6 +149,7 @@ class Expense extends HiveObject {
       cancellationAmount: cancellationAmount ?? this.cancellationAmount,
       isRefunded: isRefunded ?? this.isRefunded,
       memo: memo ?? this.memo,
+      calendarLabels: calendarLabels ?? this.calendarLabels,
     );
   }
 }

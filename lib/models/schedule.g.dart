@@ -32,13 +32,16 @@ class ScheduleAdapter extends TypeAdapter<Schedule> {
       memo: fields[12] as String?,
       cancelledDates: (fields[13] as List?)?.cast<String>() ?? [],
       classType: (fields[14] as String?) ?? '현강',
+      timetableLabels: fields[15] != null
+          ? (fields[15] as List).cast<String>()
+          : const ['학원', '과목', '강사', '수업 시간'],
     );
   }
 
   @override
   void write(BinaryWriter writer, Schedule obj) {
     writer
-      ..writeByte(15)
+      ..writeByte(16)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -68,7 +71,9 @@ class ScheduleAdapter extends TypeAdapter<Schedule> {
       ..writeByte(13)
       ..write(obj.cancelledDates)
       ..writeByte(14)
-      ..write(obj.classType);
+      ..write(obj.classType)
+      ..writeByte(15)
+      ..write(obj.timetableLabels);
   }
 
   @override

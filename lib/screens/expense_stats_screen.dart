@@ -11,6 +11,7 @@ import 'package:k_academy__app/providers/expense_provider.dart';
 import 'package:k_academy__app/screens/home_screen.dart';
 import 'package:k_academy__app/services/export_service.dart';
 import 'package:k_academy__app/widgets/child_filter_dropdown.dart';
+import 'package:k_academy__app/widgets/date_range_wheel_picker.dart';
 
 class ExpenseStatsScreen extends StatefulWidget {
   const ExpenseStatsScreen({super.key});
@@ -49,7 +50,7 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
       case '올해':
         from = DateTime(now.year, 1);
         break;
-      case '기간 설정':
+      case '기간설정':
         if (_customRange == null) return byChild;
         final to = _customRange!.end.add(const Duration(days: 1));
         return byChild
@@ -72,44 +73,20 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
           start: DateTime(now.year, now.month, 1),
           end: now,
         );
-    final picked = await showDateRangePicker(
+    final picked = await showDialog<DateTimeRange>(
       context: context,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-      initialDateRange: initial,
-      locale: const Locale('ko'),
-      builder: (context, child) => Dialog(
-        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(28),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 392),
-            child: Theme(
-              data: Theme.of(context).copyWith(
-                colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-                datePickerTheme: const DatePickerThemeData(
-                  headerHeadlineStyle: TextStyle(fontSize: 16),
-                  dayStyle: TextStyle(fontSize: 14),
-                  weekdayStyle: TextStyle(fontSize: 14),
-                  yearStyle: TextStyle(fontSize: 14),
-                ),
-              ),
-              child: child!,
-            ),
-          ),
-        ),
-      ),
+      builder: (_) => DateRangeWheelPicker(initialRange: initial),
     );
     if (picked != null) {
       setState(() {
         _customRange = picked;
-        _period = '기간 설정';
+        _period = '기간설정';
       });
     }
   }
 
   String _customRangeLabel() {
-    if (_customRange == null) return '기간 설정';
+    if (_customRange == null) return '기간설정';
     final s = _customRange!.start;
     final e = _customRange!.end;
     return '${s.month}/${s.day}~${e.month}/${e.day}';
@@ -189,18 +166,25 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
   }
 
   Widget _buildPeriodSelector() {
-    final isCustom = _period == '기간 설정';
+    final isCustom = _period == '기간설정';
+    final primary = Theme.of(context).primaryColor;
     return Wrap(
-      spacing: 8,
-      runSpacing: 6,
+      spacing: 0,
+      runSpacing: 4,
       children: [
         ..._periods.map((p) {
           final selected = p == _period;
           return ChoiceChip(
             label: Text(p),
             selected: selected,
-            onSelected: (_) => setState(() => _period = p),
-            selectedColor: Theme.of(context).primaryColor,
+            showCheckmark: false,
+            onSelected: (_) => setState(() {
+              _period = p;
+              _customRange = null;
+            }),
+            selectedColor: primary,
+            side: BorderSide.none,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             labelStyle: TextStyle(
               color: selected ? Colors.white : null,
               fontWeight:
@@ -208,33 +192,30 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
             ),
           );
         }),
-        // 기간 설정 버튼
-        GestureDetector(
-          onTap: _pickCustomRange,
-          child: Chip(
-            label: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _customRangeLabel(),
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: isCustom ? Colors.white : null,
-                    fontWeight:
-                        isCustom ? FontWeight.bold : FontWeight.normal,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Icon(
-                  Icons.calendar_month_outlined,
-                  size: 14,
-                  color: isCustom ? Colors.white : Colors.grey[600],
-                ),
-              ],
-            ),
-            backgroundColor: isCustom
-                ? Theme.of(context).primaryColor
-                : null,
+        // 기간설정 버튼
+        ChoiceChip(
+          label: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(_customRangeLabel()),
+              const SizedBox(width: 4),
+              Icon(
+                Icons.calendar_month_outlined,
+                size: 14,
+                color: isCustom ? Colors.white : Colors.grey[600],
+              ),
+            ],
+          ),
+          selected: isCustom,
+          showCheckmark: false,
+          onSelected: (_) => _pickCustomRange(),
+          selectedColor: primary,
+          side: BorderSide.none,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          labelStyle: TextStyle(
+            color: isCustom ? Colors.white : null,
+            fontWeight:
+                isCustom ? FontWeight.bold : FontWeight.normal,
           ),
         ),
       ],
@@ -265,11 +246,11 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
 
     return Row(
       children: [
-        _SummaryCard(label: '총 지출', amount: total, color: const Color(0xFF7BA4D4)),
+        _SummaryCard(label: '총 지출', amount: total, color: const Color(0xFF5088BD)),
         const SizedBox(width: 8),
-        _SummaryCard(label: '취소 금액', amount: cancel, color: const Color(0xFF8DC6A0)),
+        _SummaryCard(label: '취소 금액', amount: cancel, color: const Color(0xFF5AAE78)),
         const SizedBox(width: 8),
-        _SummaryCard(label: '실 지출', amount: net, color: const Color(0xFFD48A8A)),
+        _SummaryCard(label: '실 지출', amount: net, color: const Color(0xFFC06060)),
       ],
     );
   }
@@ -546,7 +527,7 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
   }
 
   String _periodLabel() {
-    if (_period == '기간 설정' && _customRange != null) {
+    if (_period == '기간설정' && _customRange != null) {
       final s = _customRange!.start;
       final e = _customRange!.end;
       return '${s.year}.${s.month.toString().padLeft(2, '0')}.${s.day.toString().padLeft(2, '0')}'
@@ -569,9 +550,11 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
         label: const Text('Excel 다운로드',
             style: TextStyle(fontWeight: FontWeight.bold)),
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.lightGreen,
-          foregroundColor: Colors.black,
+          backgroundColor: const Color(0xFF8BC34A),
+          foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          elevation: 2,
+          shadowColor: const Color(0xFF8BC34A).withValues(alpha: 0.4),
         ),
       ),
     );
@@ -596,14 +579,21 @@ class _SummaryCard extends StatelessWidget {
       .replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
           (m) => '${m[1]},');
 
+  /// 배경용 color는 그대로, 글자는 HSL 명도를 낮춰 진하게
+  Color get _textColor {
+    final hsl = HSLColor.fromColor(color);
+    return hsl.withLightness((hsl.lightness * 0.55).clamp(0.0, 1.0)).toColor();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final tc = _textColor;
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(13),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.04),
@@ -617,7 +607,7 @@ class _SummaryCard extends StatelessWidget {
             Text(label,
                 style: TextStyle(
                     fontSize: 12,
-                    color: color,
+                    color: tc,
                     fontWeight: FontWeight.bold)),
             const SizedBox(height: 6),
             Text(
@@ -625,7 +615,7 @@ class _SummaryCard extends StatelessWidget {
               style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
-                  color: color),
+                  color: tc),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
