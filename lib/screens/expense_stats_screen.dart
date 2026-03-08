@@ -126,7 +126,7 @@ class _ExpenseStatsScreenState extends State<ExpenseStatsScreen> {
                 if (v == 'logout') signOutAndRestart(context);
               },
               itemBuilder: (_) => [
-                const PopupMenuItem(value: 'logout', child: Text('로그아웃')),
+                const PopupMenuItem(value: 'logout', child: Row(children: [Icon(Icons.logout, size: 20), SizedBox(width: 8), Text('로그아웃')])),
               ],
             ),
         ],

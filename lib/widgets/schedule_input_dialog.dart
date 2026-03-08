@@ -510,6 +510,8 @@ class _ScheduleInputDialogState extends State<ScheduleInputDialog> {
                             label: Text(_dayNames[i]),
                             selected: selected,
                             showCheckmark: false,
+                            side: BorderSide.none,
+                            backgroundColor: Colors.grey[200],
                             onSelected: _isEditing
                                 ? null
                                 : (v) => setState(() {
